@@ -29,8 +29,11 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "vae" ]; then
         --data-root "$OASIS_ROOT" --mode all \
         --ckpt recognition/vae_oasis/checkpoints/vae_z2.pth
 
-    echo; echo "########## Task 1 VAE (latent_dim=32) —— 重建 ##########"
+    echo; echo "########## Task 1 VAE (latent_dim=32) —— 重建与隐空间投影 ##########"
     python3 recognition/vae_oasis/predict.py \
         --data-root "$OASIS_ROOT" --mode recon \
+        --ckpt recognition/vae_oasis/checkpoints/vae_z32.pth
+    python3 recognition/vae_oasis/predict.py \
+        --data-root "$OASIS_ROOT" --mode umap \
         --ckpt recognition/vae_oasis/checkpoints/vae_z32.pth
 fi

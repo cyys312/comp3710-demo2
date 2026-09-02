@@ -97,28 +97,60 @@ def manifold_grid(model, device, out, n: int = 20):
 
 
 @torch.no_grad()
-def manifold_umap(model, loader, device, out, max_batches: int = 20):
-    """高维隐空间 -> UMAP 2D 散点。"""
-    try:
-        import umap
-    except ImportError:
-        print("未安装 umap-learn，请先 pip install umap-learn")
-        return
+def encode_dataset(model, loader, device, max_batches: int = 20):
+    """把若干个 batch 编码成隐向量矩阵 (N, latent_dim)，取后验均值 mu。"""
     latents = []
     for i, x in enumerate(loader):
         if i >= max_batches:
             break
         mu, _ = model.encoder(x.to(device))
-        latents.append(mu.cpu().numpy())
-    latents = np.concatenate(latents)
-    embedding = umap.UMAP(n_neighbors=15, min_dist=0.1, random_state=42).fit_transform(latents)
+        latents.append(mu.cpu())
+    return torch.cat(latents)
+
+
+def pca_2d(latents: torch.Tensor):
+    """把隐向量降到 2 维（PCA），返回 (投影, 两个主成分各自解释的方差比例）。
+
+    作为 UMAP 的兜底：集群的 conda 环境里没有 umap-learn，
+    而 PCA 用 torch 的 SVD 就能做，不引入任何额外依赖。
+    对「隐空间有没有连续结构」这个问题，线性投影已经足够说明问题；
+    UMAP 的优势在于保留非线性的邻域结构，有它更好，没有也不影响结论。
+    """
+    centred = latents - latents.mean(dim=0, keepdim=True)
+    # full_matrices=False 只算需要的奇异向量
+    u, s, _ = torch.linalg.svd(centred, full_matrices=False)
+    projected = u[:, :2] * s[:2]
+    ratio = (s ** 2 / (s ** 2).sum())[:2]
+    return projected.numpy(), ratio.numpy()
+
+
+@torch.no_grad()
+def manifold_umap(model, loader, device, out, max_batches: int = 20):
+    """高维隐空间 -> 2D 散点。优先 UMAP，没装就退回 PCA。"""
+    latents = encode_dataset(model, loader, device, max_batches)
+
+    try:
+        import umap
+        embedding = umap.UMAP(n_neighbors=15, min_dist=0.1,
+                              random_state=42).fit_transform(latents.numpy())
+        method, subtitle = "UMAP", ""
+    except ImportError:
+        embedding, ratio = pca_2d(latents)
+        method = "PCA"
+        subtitle = (f"\nPC1 {ratio[0] * 100:.1f}% + PC2 {ratio[1] * 100:.1f}% "
+                    f"= {ratio.sum() * 100:.1f}% of latent variance")
+        print("未装 umap-learn，改用 PCA 投影（结论不受影响）")
 
     plt.figure(figsize=(7, 6))
-    plt.scatter(embedding[:, 0], embedding[:, 1], s=4, alpha=0.6)
-    plt.title(f"UMAP of VAE latent space (n={len(latents)})")
+    plt.scatter(embedding[:, 0], embedding[:, 1], s=4, alpha=0.5)
+    plt.title(f"{method} projection of VAE latent space "
+              f"(n={len(latents)}, latent_dim={model.latent_dim}){subtitle}")
+    plt.xlabel(f"{method} 1")
+    plt.ylabel(f"{method} 2")
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(out, dpi=120)
-    print("已保存 UMAP 流形:", out)
+    print(f"已保存 {method} 隐空间投影:", out)
 
 
 def main():
