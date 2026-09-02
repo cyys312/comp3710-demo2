@@ -1,0 +1,42 @@
+# 数据集（体积大，不入库）
+data/
+*.zip
+*.tar.gz
+keras_png_slices_data/
+
+# 训练产物：权重文件太大不入库，但结果图要入库 —— 它们是 demo 的证据，
+# 也是 README 里结果表格的出处（全部加起来不到 1 MB）。
+checkpoints/
+runs/
+*.pth
+*.pt
+*.ckpt
+*.npy
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+
+# SLURM 与本地训练日志
+logs/
+slurm-*.out
+*.out
+*.err
+
+# 临时目录（可手动删除）
+_to_delete/
+
+# 进度存档（个人用，不入库）
+STATE.md
+commit_and_push.sh
+.gitlocks/
