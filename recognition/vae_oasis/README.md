@@ -39,29 +39,63 @@ VAE 是无监督的，`keras_png_slices_seg_*` 标签不参与训练。
 
 ## 运行
 
+本机（Apple MPS / CPU 自动识别）：
+
 ```bash
-python train.py --epochs 30 --latent-dim 32
-python predict.py --mode all
+python recognition/vae_oasis/train.py --epochs 40 --latent-dim 2    # 画流形网格用
+python recognition/vae_oasis/train.py --epochs 40 --latent-dim 32   # 重建更清晰
+python recognition/vae_oasis/predict.py --mode all --ckpt recognition/vae_oasis/checkpoints/vae_z2.pth
+```
+
+Rangpur 集群（数据在 `/home/groups/comp3710/OASIS`，无需上传）：
+
+```bash
+sbatch --export=ALL,LATENT_DIM=2  --job-name=vae-z2  slurm/vae.slurm
+sbatch --export=ALL,LATENT_DIM=32 --job-name=vae-z32 slurm/vae.slurm
+sbatch --export=ALL,ONLY=vae slurm/predict.slurm
 ```
 
 ## 结果
 
-TODO: 训练完成后填入
+训练环境：Rangpur `a100` 分区，NVIDIA A100-PCIE-40GB。各训练 40 个 epoch，
+约 6 秒/epoch。为了兼顾「能直接画流形」与「重建清晰」，训练了两个模型：
 
-| 项目 | 数值 |
-|---|---|
-| latent_dim | |
-| 最佳验证 ELBO | |
-| 训练时长 | |
+| latent_dim | 最佳验证 ELBO | 重建项 | KL 项 | 训练时长 | 作业号 |
+|---|---|---|---|---|---|
+| 2 | 4265.93 | 4173.72 | 8.24 | 4 分 43 秒 | 581351 |
+| 32 | **4183.05** | 4053.01 | 32.46 | 4 分 47 秒 | 581352 |
 
-图（`outputs/`）：
+（损失为每张图的负 ELBO，重建项是 128×128 像素上求和的 BCE，故数值在数千量级。）
 
-- `loss_curve.png` — 训练/验证损失
-- `reconstruction.png` — 上排原图，下排重建
-- `manifold_grid.png` — latent_dim=2 时的 2D 流形网格
-- `manifold_umap.png` — 高维隐空间的 UMAP 投影
+**怎么读这两行**：32 维的 ELBO 更低（重建更好），代价是隐空间维度太高、
+没法直接可视化；2 维重建略差，但可以在隐平面上铺网格直接把流形画出来。
+KL 项也符合预期：2 维时 8.24 nats ≈ 4.1 nats/维，32 维时 32.46 nats ≈ 1.0 nats/维 ——
+维度越多，每一维承载的信息越少，但都远离 0，说明**没有发生后验坍缩**
+（若 KL→0 则隐变量被忽略，模型退化成普通 autoencoder）。
 
-TODO: 对流形图做一句话解读——相邻位置的脑图是否平滑过渡？有没有明显的聚类结构？
+### 流形可视化
+
+`z2_manifold_grid.png` 是核心产物：在 latent 平面上按标准正态的**分位数**
+（而非等距）铺 20×20 网格并逐点解码。用分位数是因为先验是标准正态，
+等分位采样才能让网格均匀覆盖概率质量，边缘不会全落在训练时没见过的区域。
+
+读图结论：网格上**相邻位置的脑图是平滑过渡的**，中央脑室的蝶形结构沿一个方向
+连续地由窄变宽、由尖变圆，没有突变或撕裂。这正是 KL 项的作用——它把后验拉向
+标准正态，逼迫隐空间"填满"而不是退化成一堆互相孤立的点，
+因此在两个训练样本之间插值也能解出合理的脑图。
+
+`z32_manifold_umap.png` 是 32 维隐空间的 2D 投影。集群的 conda 环境里没有
+umap-learn，代码会自动退回 PCA（纯 torch SVD 实现，见 `pca_2d`）。
+对「隐空间是否连续」这个问题线性投影已足够；UMAP 的长处在于保留非线性邻域结构，
+有则更好，没有不影响结论。
+
+图（`outputs/`，按 latent_dim 加前缀）：
+
+- `z*_loss_curve.png` — 训练/验证损失
+- `z*_reconstruction.png` — 上排原图，下排重建
+- `z2_manifold_grid.png` — **2D 流形网格（任务书要求的可视化）**
+- `z*_manifold_umap.png` — 隐空间的 2D 投影（UMAP，缺失时自动退回 PCA）
+- `z*_recon_epoch{05..40}.png` — 重建质量随训练的演变
 
 ## Demo 要点
 
@@ -71,4 +105,7 @@ TODO: 对流形图做一句话解读——相邻位置的脑图是否平滑过�
 
 ## AI usage
 
-TODO: 记录使用的模型、用途和提示词要点（任务书要求注明来源）。
+见仓库根目录的 [`AI_PROMPTS.md`](../../AI_PROMPTS.md)。与本子项目相关的改动：
+去掉了对 scipy 的依赖（`normal_ppf` 改用 torch 的 `erfinv` 实现，与
+`scipy.stats.norm.ppf` 的偏差为 8.9e-16），以及给 UMAP 加了 PCA 兜底 ——
+集群环境两者都没有，为一个函数装一整个依赖不划算。

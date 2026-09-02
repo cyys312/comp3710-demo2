@@ -37,26 +37,60 @@ UNet 是编码器-解码器结构，核心是 **skip connection（跳跃连接�
 
 ## 运行
 
+本机（Apple MPS / CPU 自动识别）：
+
 ```bash
-python train.py --epochs 20 --batch-size 16
-python predict.py --n-show 4      # demo 现场跑这个
+python recognition/unet_oasis/train.py --epochs 25 --batch-size 16
+python recognition/unet_oasis/predict.py --n-show 4      # demo 现场跑这个
+```
+
+Rangpur 集群（数据在 `/home/groups/comp3710/OASIS`，无需上传）：
+
+```bash
+sbatch slurm/unet.slurm
+sbatch --export=ALL,ONLY=unet slurm/predict.slurm
 ```
 
 ## 结果
 
-TODO: 训练完成后填入
+训练环境：Rangpur `a100` 分区，NVIDIA A100-PCIE-40GB（作业 581337）。
+25 个 epoch，约 0.4 分钟/epoch，共约 10 分钟。
+下表是在 **544 张测试集切片**上的结果（该划分完全没有参与训练与调参）：
 
-| 类别 | 含义 | 测试集 DSC |
-|---|---|---|
-| 0 | 背景 | |
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| **mean** | | |
+| 类别 | 组织 | 像素占比 | 测试集 DSC |
+|---|---|---|---|
+| 0 | 背景 | 72.30 % | **0.9993** |
+| 1 | 脑脊液 CSF | 5.66 % | **0.9651** |
+| 2 | 灰质 | 11.39 % | **0.9658** |
+| 3 | 白质 | 10.65 % | **0.9795** |
+| **mean** | | | **0.9774** |
+
+**全部四个标签均 > 0.9，满足任务书要求。** 最好的 checkpoint 来自第 22 个 epoch
+（按验证集平均 DSC 选取，测试集只在最后评估一次）。
+
+### 标签与组织的对应关系是怎么确定的
+
+数据集本身没有给标签字典。我用「各标签区域在原图中的平均灰度」反推：
+
+| 标签 | 平均灰度 |
+|---|---|
+| c0 | 0.0551 |
+| c1 | 0.1407 |
+| c2 | 0.3153 |
+| c3 | 0.4755 |
+
+灰度严格单调递增，与 T1 加权 MRI 的组织对比度顺序完全一致：
+背景最暗 → 脑脊液（T1 上低信号）→ 灰质 → 白质最亮。
+
+### 为什么 c1 的 DSC 最低
+
+CSF 只占 5.66 % 的像素，且多为脑室边缘的细长结构，
+边界像素占其总面积的比例最高 —— Dice 对小目标的边界误差最敏感，
+错一圈像素对小结构的惩罚远大于对大结构。这也是用 CE + Dice
+组合损失而非纯 CE 的原因：背景占 72.30 %，纯 CE 会让模型偏向背景。
 
 图（`outputs/`）：
 
-- `loss_curve.png` — 训练损失
 - `dice_curve.png` — 逐类 DSC 随 epoch 变化（含 0.9 参考线）
 - `segmentation_examples.png` — 原图 / 真值 / 预测三列对比
 
@@ -69,4 +103,7 @@ TODO: 训练完成后填入
 
 ## AI usage
 
-TODO: 记录使用的模型、用途和提示词要点（任务书要求注明来源）。
+见仓库根目录的 [`AI_PROMPTS.md`](../../AI_PROMPTS.md)。与本子项目直接相关的两处：
+AI 初版把软 Dice 同时当作损失和评测指标（评测必须用硬预测），
+以及把 batch 级 DSC 取平均当作数据集级 DSC（比值不能这样平均）——
+两处都已修正，理由写在 `modules.py` 的注释里。
