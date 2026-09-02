@@ -9,7 +9,7 @@ from pathlib import Path
 
 import torch
 
-from dataset import get_dataloaders
+from dataset import get_dataloaders, get_gpu_loaders
 from modules import ResNet18
 
 
@@ -27,12 +27,16 @@ def main():
     p.add_argument("--ckpt", type=str, default=str(Path(__file__).parent / "checkpoints/resnet18_cifar10.pth"))
     p.add_argument("--data-root", type=str, default="./data")
     p.add_argument("--num-workers", type=int, default=4)
+    p.add_argument("--loader", choices=["gpu", "cpu"], default="gpu")
     args = p.parse_args()
 
     device = pick_device()
-    _, test_loader, classes = get_dataloaders(args.data_root, 512, args.num_workers)
+    if args.loader == "gpu":
+        _, test_loader, classes = get_gpu_loaders(args.data_root, 512, device)
+    else:
+        _, test_loader, classes = get_dataloaders(args.data_root, 512, args.num_workers)
 
-    model = ResNet18().to(device)
+    model = ResNet18().to(device, memory_format=torch.channels_last)
     state = torch.load(args.ckpt, map_location=device)
     model.load_state_dict(state["model"])
     model.eval()

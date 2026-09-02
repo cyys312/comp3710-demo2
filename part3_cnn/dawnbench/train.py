@@ -49,6 +49,9 @@ def parse_args():
                         "cpu=torchvision 的 DataLoader + PIL 增强（用于对照）")
     p.add_argument("--log-every", type=int, default=20,
                    help="每多少个 step 打印一次进度")
+    p.add_argument("--no-save", action="store_true",
+                   help="不写 checkpoint。演示时跑单个 epoch 要加这个，"
+                        "否则 1 轮的模型会覆盖掉已训练好的那个")
     return p.parse_args()
 
 
@@ -127,8 +130,9 @@ def main():
 
         if acc > best_acc:
             best_acc = acc
-            torch.save({"model": model.state_dict(), "acc": acc, "epoch": epoch},
-                       CKPT_DIR / "resnet18_cifar10.pth")
+            if not args.no_save:
+                torch.save({"model": model.state_dict(), "acc": acc, "epoch": epoch},
+                           CKPT_DIR / "resnet18_cifar10.pth")
 
     total_s = time.perf_counter() - t0
     print(f"\n最佳准确率 {best_acc * 100:.2f}%，总用时 {total_s:.0f} 秒 "
