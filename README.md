@@ -29,7 +29,8 @@ comp3710/
 │       └── run_rangpur.slurm   #       Rangpur 集群提交脚本
 ├── recognition/                # Part 4 — 识别任务 (7 分)
 │   ├── vae_oasis/              #   Task 1 — VAE (Easy, 3 分)
-│   └── unet_oasis/             #   Task 2 — UNet 分割 (Medium, 累计 5 分)
+│   ├── unet_oasis/             #   Task 2 — UNet 分割 (Medium, 累计 5 分)
+│   └── gan_oasis/              #   Task 3 — GAN 生成脑图 (Hard, 累计 7 分)
 ├── slurm/                      # Rangpur 作业脚本（参数经集群实测核对）
 ├── AI_PROMPTS.md               # AI 使用记录（评分标准要求）
 ├── requirements.txt
@@ -134,7 +135,7 @@ tail -f logs/<jobname>-<jobid>.out
 | Part 4.1 — edX 进阶 Git 短课程 | 1 | — | **待完成** |
 | Part 4 Task 1 — VAE + 流形 | — | 验证 ELBO 4183.05，2D 流形网格已出 | 完成 |
 | Part 4 Task 2 — UNet 分割 | — | 测试集 **mean DSC 0.9774**，四类全部 > 0.9 | 完成 |
-| Part 4 Task 3 — GAN | — | 未做（见下方说明） | 未做 |
+| Part 4 Task 3 — GAN | — | 多样性达真实数据 **84–90 %**，无 mode collapse | 完成 |
 
 ### Part 1 — 四种 DFT 实现的耗时（秒，取 3 次最小值）
 
@@ -164,10 +165,21 @@ tail -f logs/<jobname>-<jobid>.out
 ### 待完成
 
 - [ ] **Part 4.1 — edX 进阶 Git 短课程**（1 分，纯粹花时间，不写代码）
-- [ ] ~~Part 4 Task 3 — GAN 生成脑图~~
 
-> **关于 Task 3**：未实现 GAN，因此 Part 4 的任务部分按 Medium 难度计，
-> 上限 5/7 分。若要冲满分需补做并解决 mode collapse（模式崩塌）。
+Task 1、2、3 全部实现，Part 4 按 **Hard 难度**计，任务部分上限 7/7。
+
+### 关于 Task 3 的 mode collapse
+
+任务书要求 mode collapse «need to be fully resolved»。本项目不靠肉眼判断，
+而是用**样本两两平均 L2 距离**作为多样性指标，与真实数据的同一指标做比值：
+
+| epoch | 6 | 15 | 43 |
+|---|---|---|---|
+| 多样性 / 真实数据 | 24 % | 65 % | **90 %** |
+
+曲线呈 V 形是 GAN 早期的正常现象——生成器先学"平均脑"（像脑但彼此雷同），
+判别器识破后才被迫覆盖真实分布。**低点不是崩塌，区别在于能否自行恢复**。
+详见 [`recognition/gan_oasis/README.md`](recognition/gan_oasis/README.md)。
 
 ## AI 使用声明
 
