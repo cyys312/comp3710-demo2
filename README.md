@@ -33,6 +33,7 @@ comp3710/
 │   └── gan_oasis/              #   Task 3 — GAN 生成脑图 (Hard, 累计 7 分)
 ├── slurm/                      # Rangpur 作业脚本（参数经集群实测核对）
 ├── AI_PROMPTS.md               # AI 使用记录（评分标准要求）
+├── DEMO_PREP.md                # 演示准备：预期问题与答法
 ├── requirements.txt
 └── README.md
 ```
