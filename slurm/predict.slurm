@@ -37,3 +37,9 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "vae" ]; then
         --data-root "$OASIS_ROOT" --mode umap \
         --ckpt recognition/vae_oasis/checkpoints/vae_z32.pth
 fi
+
+if [ "$ONLY" = "all" ] || [ "$ONLY" = "gan" ]; then
+    echo; echo "########## Task 3 GAN —— 生成样本、多样性指标与隐空间插值 ##########"
+    python3 recognition/gan_oasis/predict.py \
+        --data-root "$OASIS_ROOT" --n 64
+fi
