@@ -277,7 +277,7 @@
     <ul class="done">
       <li>十余个 commit 按 Part 分组，message 说明<b>改动的理由</b></li>
       <li>主 README + 每个子项目独立 README，含算法、数据划分理由、结果表</li>
-      <li>代码全中文注释，四件套结构，<code>AI_PROMPTS.md</code> 记录 AI 使用</li>
+      <li>代码注释与全部 README <b>已改为英文</b>（marker 读得懂才算数），四件套结构，<code>AI_PROMPTS.md</code> 记录 AI 使用</li>
     </ul>
   </div>
 
@@ -1344,6 +1344,7 @@ loss_d = (bce(logits_real, torch.full_like(logits_real, args.label_smooth))
 
 <script>
 (function(){
+  // 离线打开时由本文件自己加载 hljs（在线版由平台注入，无需这行）
   if (window.hljs) { try { hljs.highlightAll(); } catch(e) {} }
 
   // 勾选状态存本地，纯粹是备考时的便利；读写都容错，取不到就当没勾过
@@ -1383,3 +1384,5 @@ loss_d = (bce(logits_real, torch.full_like(logits_real, args.label_smooth))
   secs.forEach(function(s){ if(s) io.observe(s); });
 })();
 </script>
+
+<!--claude-hljs-runtime-begin:593838-->
