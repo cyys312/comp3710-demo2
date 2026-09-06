@@ -12,6 +12,79 @@
 
 ---
 
+## 任务总览 — 任务书到底要求了什么
+
+| Part | 分值 | 任务书要求什么 | 状态 |
+|---|---|---|---|
+| **1** DFT | 1 | 重建方波；三个函数改用 PyTorch；**额外做显式跑 GPU 的 naive_dft**；比较耗时并解释排序 | 完成 |
+| **2** Eigenfaces | 1 | LFW 做 PCA 得 eigenfaces，投影后接随机森林，展示分类性能 | 完成 |
+| **3.1** CNN | 1 | 同一 LFW 数据集做 CNN；**两层 3×3 / 32 filters** + 全连接；应优于 Part 2 | 完成 |
+| **3.2** DAWNBench | 4 | ResNet-18 跑 CIFAR-10，三档要求（见下） | 完成 |
+| **4.1** edX Git | 1 | 完成第二个 Git 短课程 *Version Control for Teams using Git* | **你本人做** |
+| **4.4** 识别任务 | 7 | Easy 只做 Task 1 上限 3/7；Medium 做 1+2 上限 5/7；**Hard 三个全做 7/7** | 三个全做 |
+
+### Part 3.2 的三档（4 分拆开算）
+
+- **1 分** — >90 % 准确率且训练快（集群上通常 30 分钟内）→ 我们 94.15 % / 95 秒
+- **1 分** — **必须在演示时于 Rangpur 上跑推理和一个 epoch 的训练**
+  → `sbatch slurm/demo_dawnbench.slurm`（已彩排通过）
+- **2 分** — 用混合精度达到 94 %，时间与 V100 的约 360 秒相当或更快 → 95 秒，约快 3.8 倍
+
+另有一条限制：*Usage of pre-built models will generally not be allowed* ——
+我们的 ResNet-18 是自己写的，没用 torchvision 预置模型，也没有预训练权重。
+
+### Part 4 还有两分与任务难度无关
+
+> 2. GitHub project meets suitable practices, e.g. a suitable Readme file and documentation,
+>    while using reasonable and meaningful commit messages etc. **(1 Mark)**
+> 3. Code is commented, structured and designed correctly for use by others and follows
+>    proper software engineering practices **(1 Mark)**
+
+### 前置硬条件 —— 不满足则 Part 4 一分不得
+
+> You must create a GitHub project in your own account for the tasks below with relevant
+> commit logs in addition to your demonstration to receive **ANY** marks for this part of the lab.
+> The demonstrator may request evidence that this is your own account by **logging into the
+> account during the demo**.
+
+演示时可能被要求当场登录 GitHub 证明是你本人的账号 —— 提前确认能登上。
+
+### 各任务的原文要求
+
+**Task 2 UNet 这条最严格**：
+
+> The segmentation accuracy will need to be validated and achieve **> 0.9 DSC for all labels**.
+> You **must use categorical (one-hot) output** in your network. […] You must also **visualise
+> some of the segmentation results** to justify the DSC scores obtained. You **must run inference
+> at demonstration on a test set** and show the model is working correctly during the demo.
+
+四条我们都满足：四类 DSC 全 > 0.9（mean 0.9774）、one-hot 输出、
+`segmentation_examples.png` 三列对照、现场推理已彩排。
+
+**Task 3 GAN**：
+
+> Images must be **suitably realistic** and **evidence of training** […] must be provided.
+> The 'realism' […] will be **judged by your instructor**. Results obtained must look like
+> **unique brains** for full marks and issues such as **mode collapse need to be fully resolved**.
+> Full marks will only be awarded for OASIS results.
+
+**Task 1 VAE**：
+
+> To obtain full marks, you must **train the model** and **visualise the resulting manifold**
+> created by the VAE. For the visualisation, you may use sampling methods to create a 2D image
+> of the manifold **or** use a dimensionality reduction technique such as UMAP.
+
+**Part 1 DFT**：
+
+> Now modify the 'square_wave', 'square_wave_fourier' and 'naive_dft' functions so that they are
+> implemented using **PyTorch** operations. For 'naive_dft' in particular, create a second version
+> that **explicitly runs on the GPU** […] (rather than their built-in FFT functions). Compare its
+> computation time with the other two methods, **note the times in order of fastest to slowest**.
+> […] **Can you explain the order of the methods in terms of time, i.e., why is the fastest
+> method the fastest?**
+
+---
+
 ## 0. 三分钟自述的结构
 
 不要按 Part 1→4 平铺直叙，那样时间不够且没有重点。建议：

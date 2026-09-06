@@ -169,6 +169,21 @@
   .hljs-built_in,.hljs-params{color:var(--hl-builtin)}
   .hljs-attr,.hljs-property{color:var(--ink)}
 
+
+  /* 任务要求块 */
+  .task{border:1px solid var(--line);border-left:3px solid var(--slate);background:var(--line-soft);
+    border-radius:8px;padding:16px 20px;margin:0 0 20px}
+  .task > :last-child{margin-bottom:0}
+  .task .q-tag{color:var(--slate)}
+  .task-quote{margin:0 0 13px;padding:2px 0 2px 14px;border-left:2px solid var(--line);
+    font-size:13.5px;line-height:1.7;color:var(--slate)}
+  .task-quote em{font-style:normal;color:var(--ink);font-weight:600}
+  ul.done{list-style:none;padding:0;margin:0}
+  ul.done li{position:relative;padding-left:25px;margin-bottom:8px;font-size:14.5px;line-height:1.65}
+  ul.done li::before{content:"✓";position:absolute;left:2px;top:0;color:var(--accent);font-weight:700}
+  ul.done li.todo::before{content:"○";color:var(--faint);font-weight:400}
+  ul.done li.live::before{content:"▶";color:var(--signal);font-size:12px;top:1px}
+
   .check{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:2px}
   .check li{margin:0}
   .check label{display:flex;gap:11px;align-items:flex-start;padding:9px 13px;border-radius:7px;cursor:pointer}
@@ -210,6 +225,7 @@
 
 <nav class="rail" id="rail">
   <div class="rail-group">开场</div>
+  <a href="#brief">任务总览<span class="mk">15</span></a>
   <a href="#opening">三分钟自述</a>
   <a href="#shared">三处共用设计</a>
   <div class="rail-group">按 Part</div>
@@ -228,6 +244,49 @@
 </nav>
 
 <main>
+
+<section id="brief">
+  <div class="sec-head"><h2>任务总览</h2><span class="chip hot">满分 15</span></div>
+  <p class="sec-lede">任务书要求的全部内容，与我们的完成状态一一对应。演示前把这张表过一遍。</p>
+
+  <div class="tw"><table class="wrap">
+    <thead><tr><th>Part</th><th class="num">分值</th><th>任务书要求什么</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b> DFT</td><td class="num">1</td><td>重建方波；把三个函数改用 PyTorch 实现；<b>额外做一个显式跑 GPU 的 naive_dft</b>；比较三者耗时并解释排序</td><td class="win">完成</td></tr>
+      <tr><td><b>2</b> Eigenfaces</td><td class="num">1</td><td>LFW 人脸做 PCA 得 eigenfaces，投影后接随机森林，展示分类性能</td><td class="win">完成</td></tr>
+      <tr><td><b>3.1</b> CNN</td><td class="num">1</td><td>对同一 LFW 数据集做 CNN 分类；<b>两层 3×3 / 32 filters</b> + 全连接；应优于 Part 2</td><td class="win">完成</td></tr>
+      <tr><td><b>3.2</b> DAWNBench</td><td class="num">4</td><td>ResNet-18 跑 CIFAR-10，三档要求（见下）</td><td class="win">完成</td></tr>
+      <tr><td><b>4.1</b> edX Git</td><td class="num">1</td><td>完成第二个 Git 短课程 <em>Version Control for Teams using Git</em></td><td>你本人做</td></tr>
+      <tr><td><b>4.4</b> 识别任务</td><td class="num">7</td><td>Easy 只做 Task 1 上限 3/7；Medium 做 Task 1+2 上限 5/7；<b>Hard 三个全做 7/7</b></td><td class="win">三个全做</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="task">
+    <div class="q-tag">Part 3.2 的三档（4 分拆开算）</div>
+    <ul class="done">
+      <li><b>1 分</b> — <em>Achieve more than 90% accuracy and that is trainable in a fast time (usually under 30 mins on a cluster)</em><br>我们：94.15 % / 95 秒</li>
+      <li class="live"><b>1 分</b> — <em>The model must run inference and a single epoch of training on the Rangpur compute cluster <b>during the demonstration</b></em><br><b>这一分要现场跑</b>：<code>sbatch slurm/demo_dawnbench.slurm</code>（已彩排通过）</li>
+      <li><b>2 分</b> — <em>Can you achieve 94% accuracy and a time that is equivalent or faster [than ~360 s on a V100]?</em><br>我们：94.15 % / 95 秒，约快 3.8 倍</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="q-tag">Part 4 还有两分与任务难度无关</div>
+    <p class="task-quote">2. GitHub project meets suitable practices, e.g. a suitable Readme file and documentation, while using reasonable and meaningful commit messages etc. <em>(1 Mark)</em><br>
+    3. Code is commented, structured and designed correctly for use by others and follows proper software engineering practices <em>(1 Mark)</em></p>
+    <ul class="done">
+      <li>十余个 commit 按 Part 分组，message 说明<b>改动的理由</b></li>
+      <li>主 README + 每个子项目独立 README，含算法、数据划分理由、结果表</li>
+      <li>代码全中文注释，四件套结构，<code>AI_PROMPTS.md</code> 记录 AI 使用</li>
+    </ul>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">前置硬条件 · 不满足则 Part 4 一分不得</div>
+    <p class="task-quote">You must create a GitHub project in your own account for the tasks below with relevant commit logs in addition to your demonstration to receive <em>ANY</em> marks for this part of the lab. The demonstrator may request evidence that this is your own account by logging into the account during the demo.</p>
+    <p><b>演示时可能被要求当场登录 GitHub 证明是你本人的账号</b> —— 提前确认能登上。</p>
+  </div>
+</section>
 
 <section id="opening">
   <div class="sec-head"><h2>三分钟自述的结构</h2></div>
@@ -305,6 +364,17 @@
 
 <section id="p1">
   <div class="sec-head"><h2>Part 1 · DFT</h2><span class="chip">1 分</span><span class="chip">317 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求</div>
+    <p class="task-quote">Now modify the ’square_wave’, ’square_wave_fourier’ and ’naive_dft’ functions so that they are implemented using TensorFlow (TF) or <em>PyTorch</em> operations. For ’naive_dft’ in particular, create a second version that <em>explicitly runs on the GPU</em> using TF/PyTorch tensor operations (rather than their built-in FFT functions). Compare its computation time with the other two methods, <em>note the times in order of fastest to slowest</em>. Change the size of the data and note the change in timings. <em>Can you explain the order of the methods in terms of time, i.e., why is the fastest method the fastest?</em></p>
+    <ul class="done">
+      <li>三个函数都有 PyTorch 版：<code>square_wave_torch</code>、<code>square_wave_fourier_torch</code>、<code>naive_dft_torch</code></li>
+      <li>GPU 版自己构造 DFT 矩阵，<b>没用 <code>torch.fft</code></b>（任务书特别点名不许用）</li>
+      <li>规模扫描 N = 256…4096，四种实现的耗时表 + 双对数曲线</li>
+      <li>「为什么最快的最快」是必答题，答法见下方</li>
+    </ul>
+  </div>
+
 
   <div class="tw"><table>
     <thead><tr><th>实现</th><th class="num">N=1024</th><th class="num">N=2048</th><th class="num">N=4096</th><th>复杂度</th></tr></thead>
@@ -415,6 +485,16 @@ def naive_dft(x):
 
 <section id="p2">
   <div class="sec-head"><h2>Part 2 · Eigenfaces</h2><span class="chip">1 分</span><span class="chip">159 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求</div>
+    <p class="task-quote">用 NumPy 和 funnelled LFW 计算 Eigenfaces（人脸的 PCA）：去均值 → SVD → 取前 150 个主成分 → 投影到 face space → 画 eigenfaces 与紧致度曲线 → 用随机森林分类。<em>This should show you the performance of the RF/PCA based face recognition. (1 Mark)</em></p>
+    <ul class="done">
+      <li>按任务书参数：<code>min_faces_per_person=70</code>、<code>resize=0.4</code>、<code>test_size=0.25</code>、<code>n_components=150</code></li>
+      <li>eigenfaces 画廊、紧致度曲线、分类报告与混淆矩阵</li>
+      <li><b>额外做的</b>：多数类基线 + 主成分个数消融 + 类别加权对照（任务书没要求，但评分标准奖励「评估并改进结果」）</li>
+    </ul>
+  </div>
+
 
   <div class="volunteer">
     <div class="q-tag">主动说</div>
@@ -488,6 +568,16 @@ def naive_dft(x):
 
 <section id="p31">
   <div class="sec-head"><h2>Part 3.1 · LFW CNN</h2><span class="chip">1 分</span><span class="chip">117 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求</div>
+    <p class="task-quote">Implement a CNN based classifier for the same LFW dataset from Part 2 with <em>two convolution layers of 3x3 with 32 filters each</em> and dense layers for classification. You may use the Adam optimiser and (sparse) categorical cross entropy loss. Note that convolution layers expect <em>4D tensors</em>. […] this part […] should hopefully <em>out perform the above Eigenfaces algorithm</em>.</p>
+    <ul class="done">
+      <li>严格按要求：两层 <code>Conv2d(·, 32, kernel_size=3)</code> + 全连接分类头</li>
+      <li>Adam + 交叉熵；输入整形为 4D <code>(N, 1, 50, 37)</code></li>
+      <li><b>0.8509 vs Part 2 的 0.5776</b> —— 「应优于 Eigenfaces」这条实锤了</li>
+    </ul>
+  </div>
+
   <p class="sec-lede">准确率 <b>0.8509</b>，对比 Part 2 的 0.5776（加权后 0.7298）。</p>
 
   <div class="lane qa">问答</div>
@@ -556,6 +646,16 @@ def naive_dft(x):
 
 <section id="p32">
   <div class="sec-head"><h2>Part 3.2 · DAWNBench</h2><span class="chip hot">4 分 · 重点</span><span class="chip">443 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求 · 三档共 4 分</div>
+    <ul class="done">
+      <li><b>1 分</b> &gt;90 % 且训练时间快（集群上通常 30 分钟内）→ <b>94.15 % / 95 秒</b></li>
+      <li class="live"><b>1 分</b> <em>必须在演示时于 Rangpur 上跑推理和一个 epoch 的训练</em> → <code>sbatch slurm/demo_dawnbench.slurm</code>，已彩排</li>
+      <li><b>2 分</b> 用混合精度达到 94 %，时间与 V100 的约 360 秒相当或更快 → <b>95 秒，约快 3.8 倍</b></li>
+      <li>另有一条限制：<em>Usage of pre-built models will generally not be allowed</em> —— 我们的 ResNet-18 是自己写的，<b>没用 torchvision 的预置模型，也没有预训练权重</b></li>
+    </ul>
+  </div>
+
   <p class="sec-lede"><b>94.15 % 准确率 / 95 秒</b>（A100）。两档都达标：&gt;90 % 且 &lt;30 分钟 ✓；≥94 % 且 ≤360 秒（V100 基准）✓，快约 3.8 倍。</p>
 
   <div class="volunteer">
@@ -688,6 +788,15 @@ if acc &gt; best_acc:
 
 <section id="t1">
   <div class="sec-head"><h2>Task 1 · VAE</h2><span class="chip">Part 4</span><span class="chip">451 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求</div>
+    <p class="task-quote">Construct a Variational Autoencoder (VAE) of the MR images of the brain via the Preprocessed OASIS dataset. To obtain full marks, you must <em>train the model</em> and <em>visualise the resulting manifold</em> created by the VAE. For the visualisation, you may use sampling methods to create a 2D image of the manifold <em>or</em> use a dimensionality reduction technique such as UMAP.</p>
+    <ul class="done">
+      <li>训练了两个模型：latent_dim=2（直接画流形网格）与 32（重建更清晰）</li>
+      <li><b>流形可视化两种都做了</b>：2D 采样网格 <code>z2_manifold_grid.png</code>，以及隐空间降维投影（UMAP 缺失时自动退回 PCA）</li>
+    </ul>
+  </div>
+
 
   <div class="tw"><table>
     <thead><tr><th>latent_dim</th><th class="num">最佳验证 ELBO</th><th class="num">重建项</th><th class="num">KL 项</th></tr></thead>
@@ -791,6 +900,17 @@ grid_x = normal_ppf(np.linspace(0.02, 0.98, n))     # 按分位数取，不是�
 
 <section id="t2">
   <div class="sec-head"><h2>Task 2 · UNet</h2><span class="chip hot">Part 4 · 重点</span><span class="chip">474 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求 · 这条最严格</div>
+    <p class="task-quote">The segmentation accuracy will need to be validated and achieve <em>&gt; 0.9 DSC for all labels</em>. You <em>must use categorical (one-hot) output</em> in your network. Not doing so may be a small deduction. You must also <em>visualise some of the segmentation results</em> to justify the DSC scores obtained. You <em>must run inference at demonstration on a test set</em> and show the model is working correctly during the demo.</p>
+    <ul class="done">
+      <li><b>四个标签全部 &gt; 0.9</b>：0.9993 / 0.9651 / 0.9658 / 0.9795，mean 0.9774（测试集 544 张）</li>
+      <li><b>one-hot 输出</b>：网络输出 4 通道 logits，标签用 <code>F.one_hot</code> 转 (B,4,H,W) 配 Dice 损失</li>
+      <li>可视化：<code>segmentation_examples.png</code>（原图 / 真值 / 预测三列）</li>
+      <li class="live"><b>现场推理</b>：<code>sbatch --export=ALL,ONLY=unet slurm/predict.slurm</code>，已彩排</li>
+    </ul>
+  </div>
+
 
   <div class="tw"><table>
     <thead><tr><th>类别</th><th>组织</th><th class="num">像素占比</th><th class="num">测试集 DSC</th></tr></thead>
@@ -942,6 +1062,17 @@ for p in self.img_paths:
 
 <section id="t3">
   <div class="sec-head"><h2>Task 3 · GAN</h2><span class="chip">Part 4</span><span class="chip">518 行</span></div>
+  <div class="task">
+    <div class="q-tag">任务书要求</div>
+    <p class="task-quote">Images must be <em>suitably realistic</em> and <em>evidence of training</em> (generated images, training loss plots etc.) of the models must be provided. The ’realism’ of the brains will be <em>judged by your instructor</em>. Results obtained must look like <em>unique brains</em> for full marks and issues such as <em>mode collapse need to be fully resolved</em>. Full marks will only be awarded for OASIS results.</p>
+    <ul class="done">
+      <li>用的就是 OASIS（不是 MNIST/CelebA），128×128，80 个 epoch</li>
+      <li>训练证据：固定噪声下 16 张演化图 + 损失曲线 + 多样性曲线</li>
+      <li><b>mode collapse 有量化证据</b>：多样性达真实数据 88 %，插值图 8 行全部连续形变</li>
+      <li>「realism」由老师主观判定 —— 所以要主动说出局限（见下方）</li>
+    </ul>
+  </div>
+
 
   <div class="lane qa">问答</div>
 
