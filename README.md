@@ -34,6 +34,7 @@ comp3710/
 ├── slurm/                      # Rangpur 作业脚本（参数经集群实测核对）
 ├── AI_PROMPTS.md               # AI 使用记录（评分标准要求）
 ├── DEMO_PREP.md                # 演示准备：预期问题与答法
+├── CODE_WALKTHROUGH.md         # 代码讲解：每个文件在干嘛、逐块拆解
 ├── requirements.txt
 └── README.md
 ```
