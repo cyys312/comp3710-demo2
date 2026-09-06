@@ -2,83 +2,85 @@
 
 Semester 2, 2026 · The University of Queensland
 
-仓库：<https://github.com/cyys312/comp3710-demo2>
+Repository: <https://github.com/cyys312/comp3710-demo2>
 
-本仓库包含 COMP3710 Lab 2（Pattern Recognition）四个部分的实现。
-框架统一使用 **PyTorch**。
+This repository contains the implementations of the four parts of COMP3710 Lab 2
+(Pattern Recognition). Everything is built on **PyTorch**.
 
 ---
 
-## 目录结构
+## Repository layout
 
 ```
 comp3710/
-├── data/                       # 数据集（不入 git），见下方「数据」
-├── docs/                       # 任务书与评分标准 PDF
-├── part1_dft/                  # Part 1 — 离散傅里叶变换 (1 分)
+├── data/                       # Datasets (not in git), see "Data" below
+├── docs/                       # Task sheet and marking rubric PDFs
+├── part1_dft/                  # Part 1 — Discrete Fourier Transform (1 mark)
 │   └── dft.py
-├── part2_eigenfaces/           # Part 2 — Eigenfaces / PCA + 随机森林 (1 分)
+├── part2_eigenfaces/           # Part 2 — Eigenfaces / PCA + random forest (1 mark)
 │   └── eigenfaces.py
-├── part3_cnn/                  # Part 3 — CNN (5 分)
-│   ├── cnn_lfw.py              #   3.1 LFW 人脸 CNN 分类器 (1 分)
-│   └── dawnbench/              #   3.2 DAWNBench: ResNet-18 + CIFAR-10 (4 分)
-│       ├── modules.py          #       模型定义
-│       ├── dataset.py          #       数据加载与增强
-│       ├── train.py            #       训练（混合精度 + OneCycle）
-│       ├── predict.py          #       推理与评估
-│       └── run_rangpur.slurm   #       Rangpur 集群提交脚本
-├── recognition/                # Part 4 — 识别任务 (7 分)
-│   ├── vae_oasis/              #   Task 1 — VAE (Easy, 3 分)
-│   ├── unet_oasis/             #   Task 2 — UNet 分割 (Medium, 累计 5 分)
-│   └── gan_oasis/              #   Task 3 — GAN 生成脑图 (Hard, 累计 7 分)
-├── slurm/                      # Rangpur 作业脚本（参数经集群实测核对）
-├── AI_PROMPTS.md               # AI 使用记录（评分标准要求）
-├── DEMO_PREP.md                # 演示准备：预期问题与答法
-├── CODE_WALKTHROUGH.md         # 代码讲解：每个文件在干嘛、逐块拆解
-├── docs/demo_handbook.html     # 上面两份的合并版，浏览器打开即用
+├── part3_cnn/                  # Part 3 — CNN (5 marks)
+│   ├── cnn_lfw.py              #   3.1 LFW face CNN classifier (1 mark)
+│   └── dawnbench/              #   3.2 DAWNBench: ResNet-18 + CIFAR-10 (4 marks)
+│       ├── modules.py          #       Model definitions
+│       ├── dataset.py          #       Data loading and augmentation
+│       ├── train.py            #       Training (mixed precision + OneCycle)
+│       ├── predict.py          #       Inference and evaluation
+│       └── run_rangpur.slurm   #       Rangpur cluster submission script
+├── recognition/                # Part 4 — Recognition tasks (7 marks)
+│   ├── vae_oasis/              #   Task 1 — VAE (Easy, 3 marks)
+│   ├── unet_oasis/             #   Task 2 — UNet segmentation (Medium, 5 marks total)
+│   └── gan_oasis/              #   Task 3 — GAN brain synthesis (Hard, 7 marks total)
+├── slurm/                      # Rangpur job scripts (settings verified on the cluster)
+├── AI_PROMPTS.md               # AI usage log (required by the rubric)
+├── DEMO_PREP.md                # Demo prep: expected questions and how to answer them
+├── CODE_WALKTHROUGH.md         # Code walkthrough: what each file does, block by block
+├── docs/demo_handbook.html     # The two above merged, ready to open in a browser
 ├── requirements.txt
 └── README.md
 ```
 
-每个 `recognition/` 子项目遵循课程约定的四件套：
+Every `recognition/` sub-project follows the four-file structure the course requires:
 
-| 文件 | 职责 |
+| File | Responsibility |
 |---|---|
-| `modules.py` | 模型/网络各组件的定义 |
-| `dataset.py` | 数据加载器与预处理 |
-| `train.py` | 训练、验证、保存、损失曲线 |
-| `predict.py` | 载入 checkpoint 做推理与可视化 |
-| `README.md` | 算法原理、数据划分、结果与图 |
+| `modules.py` | Definitions of the model / network components |
+| `dataset.py` | Data loaders and preprocessing |
+| `train.py` | Training, validation, checkpointing, loss curves |
+| `predict.py` | Loads a checkpoint for inference and visualisation |
+| `README.md` | Algorithm background, data splits, results and figures |
 
 ---
 
-## 环境
+## Environment
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-GPU 版 PyTorch 请按 <https://pytorch.org> 上对应 CUDA 版本的命令安装。
+For a GPU build of PyTorch, use the command for your CUDA version from <https://pytorch.org>.
 
-## 数据
+## Data
 
-- **LFW（Part 2/3.1）**：由 `sklearn.datasets.fetch_lfw_people` 首次运行时自动下载。
-- **CIFAR-10（Part 3.2）**：本地由 `torchvision.datasets.CIFAR10` 自动下载到 `data/`。
-  **集群上不要现下**——已有共享副本 `/home/groups/cifar/CIFAR-10`
-  （`cifar-10-batches-py` 格式，torchvision 可直接读）；
-  torchvision 默认源到集群只有约 3 KB/s，170 MB 要下十几个小时。
-- **OASIS 脑部 MRI（Part 4）**：本地解压到 `data/keras_png_slices_data/`；
-  集群上位于 `/home/groups/comp3710/OASIS`，无需上传。
+- **LFW (Parts 2 / 3.1)**: downloaded automatically by `sklearn.datasets.fetch_lfw_people`
+  on the first run.
+- **CIFAR-10 (Part 3.2)**: locally, `torchvision.datasets.CIFAR10` downloads it into `data/`.
+  **Do not download it on the cluster** — a shared copy already exists at
+  `/home/groups/cifar/CIFAR-10` (`cifar-10-batches-py` format, which torchvision reads directly);
+  the default torchvision mirror only reaches about 3 KB/s from the cluster, so 170 MB would take
+  more than ten hours.
+- **OASIS brain MRI (Part 4)**: unzip locally into `data/keras_png_slices_data/`; on the cluster
+  it already lives at `/home/groups/comp3710/OASIS`, so nothing needs uploading.
 
 ```bash
 unzip keras_png_slices_data.zip -d data/
 ```
 
-目录含 6 个子集：`keras_png_slices_{train,validate,test}`（原图）
-与 `keras_png_slices_seg_{train,validate,test}`（分割标签）。
+The directory holds six subsets: `keras_png_slices_{train,validate,test}` (raw images)
+and `keras_png_slices_seg_{train,validate,test}` (segmentation labels).
 
-## 运行
+## Running
 
 ```bash
 python part1_dft/dft.py
@@ -89,108 +91,117 @@ python recognition/vae_oasis/train.py
 python recognition/unet_oasis/train.py
 ```
 
-## 在 Rangpur 上训练
+## Training on Rangpur
 
-Part 3.2（DAWNBench）必须在集群上跑，Part 4 的 VAE/UNet 在集群上也快得多
-（UNet 一个 epoch：A100 约 0.4 分钟 vs Apple M5 约 7 分钟）。
+Part 3.2 (DAWNBench) has to run on the cluster, and the Part 4 VAE/UNet are far faster there too
+(one UNet epoch: about 0.4 minutes on an A100 vs about 7 minutes on an Apple M5).
 
 ```bash
-# 1) 首次拉取代码（校外需先连 UQ VPN，否则 ssh 22 端口超时）
+# 1) First checkout (off campus, connect the UQ VPN first or ssh to port 22 will time out)
 ssh <uqusername>@rangpur.compute.eait.uq.edu.au
 git clone https://github.com/cyys312/comp3710-demo2.git
 cd comp3710-demo2
 
-# 2) 提交作业。所有数据集集群上都已有，不需要上传或下载。
+# 2) Submit the jobs. Every dataset is already on the cluster; nothing to upload or download.
 sbatch part3_cnn/dawnbench/run_rangpur.slurm     # Part 3.2
 sbatch slurm/unet.slurm                          # Task 2
 sbatch --export=ALL,LATENT_DIM=2 --job-name=vae-z2 slurm/vae.slurm   # Task 1
-sbatch slurm/predict.slurm                       # 推理与可视化（demo 现场跑这个）
+sbatch slurm/predict.slurm                       # inference and visualisation (run this live)
 
 squeue -u $USER
 tail -f logs/<jobname>-<jobid>.out
 ```
 
-### 集群配置的三个坑（实测核对，照抄模板会挂）
+### Three cluster-configuration traps (verified on the cluster; copied templates will fail)
 
-用 `sinfo` / `scontrol show node` / `sacctmgr` 核对后发现，网上常见的 slurm
-模板在 Rangpur 上会直接失败：
+Cross-checking with `sinfo` / `scontrol show node` / `sacctmgr` shows that the slurm templates
+commonly found online fail outright on Rangpur:
 
-| 常见写法 | 实际情况 | 后果 |
+| Common recipe | What is actually true | Consequence |
 |---|---|---|
-| `#SBATCH --mem=32G` | 所有 a100 节点 `RealMemory=1` | **作业无限期 PENDING**——这是很多人卡住的真正原因 |
-| `--partition=comp3710` | 该分区 `AllowAccounts=comp3710`，账号关联未开通 | 一律 `PENDING (PartitionConfig)`，改用 `a100` 分区 |
-| `module load cuda` | 只有 cuda/11.1、11.4、12.2，而 conda 环境里是 torch 2.13.0+**cu130**（自带运行时） | 版本冲突风险，正确做法是不加载 |
+| `#SBATCH --mem=32G` | all a100 nodes report `RealMemory=1` | **job PENDING forever** — the real reason many people get stuck |
+| `--partition=comp3710` | partition sets `AllowAccounts=comp3710`; account association not enabled | always `PENDING (PartitionConfig)`; use the `a100` partition |
+| `module load cuda` | only cuda/11.1, 11.4, 12.2 exist; the conda env has torch 2.13.0+**cu130**, which ships its own runtime | version clash risk; the right move is not to load it |
 
-另外 **登录节点（login0）不要跑任何计算任务**，包括下载数据集——
-那是全课共享的机器。需要下载就提交一个 `--partition=cpu` 的作业。
-所有细节写在 `slurm/_common.sh` 的注释里。
+Also, **never run any compute on the login node (login0)**, downloading datasets included — it is
+shared by the whole course. If something has to be downloaded, submit a `--partition=cpu` job.
+All the details are written up in the comments of `slurm/_common.sh`.
 
-## 结果总览
+## Results overview
 
-所有数字都是实测的，命令与日志见各子目录 README。
+Every number here was measured; the commands and logs are in the per-directory READMEs.
 
-| 部分 | 分值 | 结果 | 状态 |
+| Part | Marks | Result | Status |
 |---|---|---|---|
-| Part 1 — DFT | 1 | 四种实现耗时对比，规模扫描（见下表） | 完成 |
-| Part 2 — Eigenfaces + 随机森林 | 1 | 准确率 0.5776（基线 0.4130）；加类别权重后 0.7298 | 完成 |
-| Part 3.1 — LFW CNN | 1 | 准确率 **0.8509**，显著优于 Part 2 | 完成 |
-| Part 3.2 — DAWNBench | 4 | **94.15 % / 95 秒**（A100） | 完成 |
-| Part 4.1 — edX 进阶 Git 短课程 | 1 | — | **待完成** |
-| Part 4 Task 1 — VAE + 流形 | — | 验证 ELBO 4183.05，2D 流形网格已出 | 完成 |
-| Part 4 Task 2 — UNet 分割 | — | 测试集 **mean DSC 0.9774**，四类全部 > 0.9 | 完成 |
-| Part 4 Task 3 — GAN | — | 测试集多样性达真实数据 **88 %**，无 mode collapse | 完成 |
+| Part 1 — DFT | 1 | timing comparison of four implementations, size sweep (table below) | Done |
+| Part 2 — Eigenfaces + random forest | 1 | accuracy 0.5776 (baseline 0.4130), 0.7298 weighted | Done |
+| Part 3.1 — LFW CNN | 1 | accuracy **0.8509**, clearly ahead of Part 2 | Done |
+| Part 3.2 — DAWNBench | 4 | **94.15 % / 95 s** (A100) | Done |
+| Part 4.1 — edX advanced Git short course | 1 | — | **Outstanding** |
+| Part 4 Task 1 — VAE + manifold | — | validation ELBO 4183.05, 2D manifold grid produced | Done |
+| Part 4 Task 2 — UNet segmentation | — | test **mean DSC 0.9774**, all four classes > 0.9 | Done |
+| Part 4 Task 3 — GAN | — | test diversity **88 %** of real data, no mode collapse | Done |
 
-### Part 1 — 四种 DFT 实现的耗时（秒，取 3 次最小值）
+### Part 1 — runtime of the four DFT implementations (seconds, best of 3 runs)
 
-| 实现 | N=1024 | N=2048 | N=4096 | 复杂度 |
+| Implementation | N=1024 | N=2048 | N=4096 | Complexity |
 |---|---|---|---|---|
-| NumPy 朴素 DFT（矩阵形式） | 0.009265 | 0.037120 | 0.146261 | O(N²) |
-| PyTorch 朴素 DFT（GPU） | 0.002785 | 0.006693 | 0.010211 | O(N²) |
+| NumPy naive DFT (matrix form) | 0.009265 | 0.037120 | 0.146261 | O(N²) |
+| PyTorch naive DFT (GPU) | 0.002785 | 0.006693 | 0.010211 | O(N²) |
 | NumPy FFT | 0.000006 | 0.000011 | 0.000019 | O(N log N) |
-| PyTorch FFT（GPU） | 0.000269 | 0.000236 | 0.000374 | O(N log N) |
+| PyTorch FFT (GPU) | 0.000269 | 0.000236 | 0.000374 | O(N log N) |
 
-排序（快→慢）：**NumPy FFT < PyTorch FFT(GPU) < PyTorch 朴素 DFT(GPU) < NumPy 朴素 DFT**。
+Ranking (fast → slow): **NumPy FFT < PyTorch FFT(GPU) < PyTorch naive DFT(GPU) < NumPy naive DFT**.
 
-三点解释：
+Three points worth drawing out:
 
-1. **FFT 最快是因为算法，不是因为硬件**。N 每翻一倍，朴素 DFT 的耗时约变 4 倍
-   （0.0093 → 0.037 → 0.146，正是 O(N²)），FFT 只增长不到 2 倍。
-   算法复杂度的差距，堆多少并行核心都补不回来。
-2. **GPU 让朴素 DFT 快了一个数量级但改不了复杂度**。N=4096 时 GPU 版比 CPU 版快
-   14 倍（0.0102 vs 0.1463），因为 N² 次乘加被摊到数千个核心上；
-   但它仍是 O(N²)，N 再翻几倍照样会输给 CPU 上的 FFT。
-3. **GPU 的 FFT 反而不如 NumPy 的**，因为这个规模下每次 kernel 启动的固定开销
-   （约 0.25 ms）就超过了计算本身。GPU 要在计算量足够大时才划算。
+1. **The FFT wins because of the algorithm, not the hardware**. Every doubling of N multiplies the
+   naive DFT runtime by roughly 4 (0.0093 → 0.037 → 0.146, exactly O(N²)), while the FFT grows by
+   less than 2. No number of parallel cores makes up for a gap in asymptotic complexity.
+2. **The GPU buys the naive DFT an order of magnitude but not a better complexity**. At N=4096 the
+   GPU version is 14x faster than the CPU one (0.0102 vs 0.1463) because the N² multiply-adds are
+   spread across thousands of cores; it is still O(N²), and a few more doublings of N will lose to
+   an FFT running on the CPU.
+3. **The GPU FFT is in fact slower than NumPy's**, because at this size the fixed cost of each
+   kernel launch (about 0.25 ms) already exceeds the computation itself. A GPU only pays off once
+   there is enough work to amortise that.
 
-补充：同为 O(N²)，NumPy 的矩阵形式比教科书式的双重 Python 循环快约 25 倍
-（N=512 时 0.0023 s vs 0.0581 s）——**复杂度和常数因子是两件事**。
+One more note: at the same O(N²), NumPy's matrix form is about 25x faster than the textbook double
+Python loop (0.0023 s vs 0.0581 s at N=512) — **complexity and constant factors are two different
+things**.
 
-### 待完成
+### Outstanding
 
-- [ ] **Part 4.1 — edX 进阶 Git 短课程**（1 分，纯粹花时间，不写代码）
+- [ ] **Part 4.1 — edX advanced Git short course** (1 mark, purely time, no code to write)
 
-Task 1、2、3 全部实现，Part 4 按 **Hard 难度**计，任务部分上限 7/7。
+Tasks 1, 2 and 3 are all implemented, so Part 4 counts at **Hard difficulty** and the task
+component caps out at 7/7.
 
-### 关于 Task 3 的 mode collapse
+### On mode collapse in Task 3
 
-任务书要求 mode collapse «need to be fully resolved»。本项目不靠肉眼判断，
-而是用**样本两两平均 L2 距离**作为多样性指标，与真实数据的同一指标做比值：
+The task sheet requires that mode collapse «need to be fully resolved». This project does not rely
+on eyeballing the samples: it uses the **mean pairwise L2 distance between samples** as the
+diversity score, and reports it as a ratio against the same measure on real data:
 
-| epoch | 6 | 15 | 43 | 80（最终） |
+| epoch | 6 | 15 | 43 | 80 (final) |
 |---|---|---|---|---|
-| 多样性 / 真实数据 | 24 % | 65 % | 90 % | **84 %** |
+| Diversity / real data | 24 % | 65 % | 90 % | **84 %** |
 
-`predict.py` 用测试集（544 张，未参与训练）作基准独立复核为 **88 %**，结论一致。
+`predict.py` re-checks this independently against the test set (544 images, never seen in training)
+and gets **88 %**, the same conclusion.
 
-曲线呈 V 形是 GAN 早期的正常现象——生成器先学"平均脑"（像脑但彼此雷同），
-判别器识破后才被迫覆盖真实分布。**低点不是崩塌，区别在于能否自行恢复**。
-详见 [`recognition/gan_oasis/README.md`](recognition/gan_oasis/README.md)。
+The V-shaped curve is normal early GAN behaviour — the generator first learns an "average brain"
+(brain-like, but all alike), and only once the discriminator sees through it is it forced to cover
+the real distribution. **A dip is not a collapse; the difference is whether it recovers by itself**.
+See [`recognition/gan_oasis/README.md`](recognition/gan_oasis/README.md) for details.
 
-## AI 使用声明
+## AI usage declaration
 
-本仓库部分代码在 **Claude Code (Opus 5)** 协助下编写，符合任务书
-"Use of Artificial Intelligence" 一节与评分标准 "Fair AI Usage" 的要求。
+Parts of the code in this repository were written with the help of **Claude Code (Opus 5)**, in
+line with the task sheet's "Use of Artificial Intelligence" section and the rubric's
+"Fair AI Usage" requirement.
 
-完整记录见 [`AI_PROMPTS.md`](AI_PROMPTS.md)，其中列出了 AI 初版代码中
-**被我发现并修正的 6 处问题**（含两处会让上报的 DSC 失真的错误、
-三处会导致集群作业永远排不上的 slurm 参数），以及我自己补做的对照实验。
+The full log is in [`AI_PROMPTS.md`](AI_PROMPTS.md), which lists the **6 problems I found and
+fixed** in the AI's first-draft code (including two bugs that would have distorted the reported DSC
+and three slurm settings that would have left cluster jobs queued forever), along with the control
+experiments I ran myself.

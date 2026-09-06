@@ -1,53 +1,56 @@
 # Task 1 — Variational Autoencoder on OASIS Brain MRI
 
-> COMP3710 Lab 2, Part 4 · Easy difficulty (最高 3/7 分)
+> COMP3710 Lab 2, Part 4 · Easy difficulty (up to 3/7 marks)
 
-## 问题描述
+## Problem statement
 
-对 Preprocessed OASIS 脑部 MR 图像训练一个变分自编码器 (VAE)，
-并可视化其隐空间所构成的流形 (manifold)。
+Train a variational autoencoder (VAE) on the Preprocessed OASIS brain MR images and visualise the
+manifold formed by its latent space.
 
-## 算法
+## Algorithm
 
-VAE 由编码器 `q(z|x)`、重参数化采样和解码器 `p(x|z)` 组成，
-训练目标为 ELBO 的负值：
+A VAE is made of an encoder `q(z|x)`, reparameterisation sampling and a decoder `p(x|z)`; the
+training objective is the negative ELBO:
 
 ```
-loss = BCE(重建, 原图) + beta * KL( q(z|x) || N(0, I) )
+loss = BCE(reconstruction, input) + beta * KL( q(z|x) || N(0, I) )
 ```
 
-- **重建项**让解码结果贴近输入；
-- **KL 项**把后验分布拉向标准正态先验，使隐空间连续、可采样——
-  这正是能把它当作「流形」来插值和可视化的原因。
-- 重参数化技巧 `z = mu + sigma * eps` 让随机采样这一步仍然可以反向传播。
+- The **reconstruction term** keeps the decoded output close to the input.
+- The **KL term** pulls the posterior towards the standard normal prior, which is what makes the
+  latent space continuous and sampleable — and therefore something that can be interpolated and
+  visualised as a "manifold" in the first place.
+- The reparameterisation trick `z = mu + sigma * eps` keeps the sampling step differentiable.
 
-网络：4 层 stride=2 卷积把 128×128 压到 8×8，再全连接输出 `mu` / `logvar`；
-解码器用对称的转置卷积还原，最后接 sigmoid 输出 [0,1]。
+Network: 4 stride=2 convolutions compress 128×128 down to 8×8, then fully connected layers output
+`mu` / `logvar`; the decoder mirrors this with transposed convolutions and ends in a sigmoid over
+[0,1].
 
-## 数据
+## Data
 
-| 划分 | 目录 |
+| split | directory |
 |---|---|
 | train | `keras_png_slices_train/` |
 | validate | `keras_png_slices_validate/` |
 | test | `keras_png_slices_test/` |
 
-数据集本身已按病例划分好，不重新切分，避免同一病例的相邻切片同时出现在训练集和测试集造成信息泄漏。
-VAE 是无监督的，`keras_png_slices_seg_*` 标签不参与训练。
+The dataset is already split by case and is not re-split, so adjacent slices of the same case
+cannot land in the training and test sets at once and leak information.
+The VAE is unsupervised: the `keras_png_slices_seg_*` labels take no part in training.
 
-预处理：转灰度、resize 到 128×128、像素归一化到 [0,1]。
+Preprocessing: convert to greyscale, resize to 128×128, normalise pixels to [0,1].
 
-## 运行
+## Running
 
-本机（Apple MPS / CPU 自动识别）：
+Locally (Apple MPS / CPU detected automatically):
 
 ```bash
-python recognition/vae_oasis/train.py --epochs 40 --latent-dim 2    # 画流形网格用
-python recognition/vae_oasis/train.py --epochs 40 --latent-dim 32   # 重建更清晰
+python recognition/vae_oasis/train.py --epochs 40 --latent-dim 2    # for the manifold grid
+python recognition/vae_oasis/train.py --epochs 40 --latent-dim 32   # sharper reconstructions
 python recognition/vae_oasis/predict.py --mode all --ckpt recognition/vae_oasis/checkpoints/vae_z2.pth
 ```
 
-Rangpur 集群（数据在 `/home/groups/comp3710/OASIS`，无需上传）：
+Rangpur cluster (the data sits at `/home/groups/comp3710/OASIS`, no upload needed):
 
 ```bash
 sbatch --export=ALL,LATENT_DIM=2  --job-name=vae-z2  slurm/vae.slurm
@@ -55,57 +58,67 @@ sbatch --export=ALL,LATENT_DIM=32 --job-name=vae-z32 slurm/vae.slurm
 sbatch --export=ALL,ONLY=vae slurm/predict.slurm
 ```
 
-## 结果
+## Results
 
-训练环境：Rangpur `a100` 分区，NVIDIA A100-PCIE-40GB。各训练 40 个 epoch，
-约 6 秒/epoch。为了兼顾「能直接画流形」与「重建清晰」，训练了两个模型：
+Training environment: Rangpur `a100` partition, NVIDIA A100-PCIE-40GB. Each model was trained for
+40 epochs at about 6 s/epoch. To get both a directly plottable manifold and sharp reconstructions,
+two models were trained:
 
-| latent_dim | 最佳验证 ELBO | 重建项 | KL 项 | 训练时长 | 作业号 |
+| latent_dim | best validation ELBO | reconstruction term | KL term | wall time | job |
 |---|---|---|---|---|---|
-| 2 | 4265.93 | 4173.72 | 8.24 | 4 分 43 秒 | 581351 |
-| 32 | **4183.05** | 4053.01 | 32.46 | 4 分 47 秒 | 581352 |
+| 2 | 4265.93 | 4173.72 | 8.24 | 4 min 43 s | 581351 |
+| 32 | **4183.05** | 4053.01 | 32.46 | 4 min 47 s | 581352 |
 
-（损失为每张图的负 ELBO，重建项是 128×128 像素上求和的 BCE，故数值在数千量级。）
+(The loss is the negative ELBO per image and the reconstruction term is a BCE summed over 128×128
+pixels, which is why the numbers are in the thousands.)
 
-**怎么读这两行**：32 维的 ELBO 更低（重建更好），代价是隐空间维度太高、
-没法直接可视化；2 维重建略差，但可以在隐平面上铺网格直接把流形画出来。
-KL 项也符合预期：2 维时 8.24 nats ≈ 4.1 nats/维，32 维时 32.46 nats ≈ 1.0 nats/维 ——
-维度越多，每一维承载的信息越少，但都远离 0，说明**没有发生后验坍缩**
-（若 KL→0 则隐变量被忽略，模型退化成普通 autoencoder）。
+**How to read these two rows**: the 32-dim model reaches a lower ELBO (better reconstruction), at
+the price of a latent space too high-dimensional to plot; the 2-dim model reconstructs slightly
+worse but lets a grid be laid over the latent plane so the manifold can be drawn directly.
+The KL terms behave as expected too: 8.24 nats ≈ 4.1 nats/dim at 2 dimensions, 32.46 nats
+≈ 1.0 nats/dim at 32 — the more dimensions, the less information each one carries, but all stay far
+from 0, which shows **no posterior collapse occurred** (with KL→0 the latent variable is ignored
+and the model degenerates into an ordinary autoencoder).
 
-### 流形可视化
+### Manifold visualisation
 
-`z2_manifold_grid.png` 是核心产物：在 latent 平面上按标准正态的**分位数**
-（而非等距）铺 20×20 网格并逐点解码。用分位数是因为先验是标准正态，
-等分位采样才能让网格均匀覆盖概率质量，边缘不会全落在训练时没见过的区域。
+`z2_manifold_grid.png` is the central result: a 20×20 grid is laid over the latent plane at the
+**quantiles** of the standard normal (not at even spacing) and decoded point by point. Quantiles
+are used because the prior is a standard normal — only equal-quantile sampling makes the grid
+cover the probability mass evenly, so the edges do not all land in regions never seen in training.
 
-读图结论：网格上**相邻位置的脑图是平滑过渡的**，中央脑室的蝶形结构沿一个方向
-连续地由窄变宽、由尖变圆，没有突变或撕裂。这正是 KL 项的作用——它把后验拉向
-标准正态，逼迫隐空间"填满"而不是退化成一堆互相孤立的点，
-因此在两个训练样本之间插值也能解出合理的脑图。
+What the figure shows: **neighbouring grid positions transition smoothly**. The butterfly-shaped
+central ventricle grows continuously from narrow to wide and from pointed to round along one
+direction, with no jumps or tearing. This is exactly the KL term at work — it pulls the posterior
+towards the standard normal, forcing the latent space to be "filled in" instead of degenerating
+into a set of isolated points, which is why interpolating between two training samples also decodes
+into a plausible brain image.
 
-`z32_manifold_umap.png` 是 32 维隐空间的 2D 投影。集群的 conda 环境里没有
-umap-learn，代码会自动退回 PCA（纯 torch SVD 实现，见 `pca_2d`）。
-对「隐空间是否连续」这个问题线性投影已足够；UMAP 的长处在于保留非线性邻域结构，
-有则更好，没有不影响结论。
+`z32_manifold_umap.png` is a 2D projection of the 32-dim latent space. The cluster's conda
+environment has no umap-learn, so the code falls back to PCA automatically (a pure torch SVD
+implementation, see `pca_2d`). For the question at hand — is the latent space continuous — a linear
+projection is enough; UMAP's strength is preserving non-linear neighbourhood structure, which is
+nice to have but changes nothing about the conclusion.
 
-图（`outputs/`，按 latent_dim 加前缀）：
+Figures (`outputs/`, prefixed by latent_dim):
 
-- `z*_loss_curve.png` — 训练/验证损失
-- `z*_reconstruction.png` — 上排原图，下排重建
-- `z2_manifold_grid.png` — **2D 流形网格（任务书要求的可视化）**
-- `z*_manifold_umap.png` — 隐空间的 2D 投影（UMAP，缺失时自动退回 PCA）
-- `z*_recon_epoch{05..40}.png` — 重建质量随训练的演变
+- `z*_loss_curve.png` — training / validation loss
+- `z*_reconstruction.png` — inputs on the top row, reconstructions below
+- `z2_manifold_grid.png` — **2D manifold grid (the visualisation the task sheet asks for)**
+- `z*_manifold_umap.png` — 2D projection of the latent space (UMAP, falling back to PCA if absent)
+- `z*_recon_epoch{05..40}.png` — how reconstruction quality evolves over training
 
-## Demo 要点
+## Demo notes
 
-- 解释 KL 项的作用，以及去掉它会发生什么（退化成普通 autoencoder，隐空间不连续）
-- 解释为什么用重参数化技巧
-- 说明 latent_dim 的取舍：2 维可直接画流形但重建糊，32 维清晰但需 UMAP
+- Explain what the KL term does and what happens without it (degenerates into an ordinary
+  autoencoder with a discontinuous latent space)
+- Explain why the reparameterisation trick is needed
+- Lay out the latent_dim trade-off: 2 dimensions can be plotted as a manifold directly but
+  reconstruct blurrily, 32 are sharp but need UMAP
 
 ## AI usage
 
-见仓库根目录的 [`AI_PROMPTS.md`](../../AI_PROMPTS.md)。与本子项目相关的改动：
-去掉了对 scipy 的依赖（`normal_ppf` 改用 torch 的 `erfinv` 实现，与
-`scipy.stats.norm.ppf` 的偏差为 8.9e-16），以及给 UMAP 加了 PCA 兜底 ——
-集群环境两者都没有，为一个函数装一整个依赖不划算。
+See [`AI_PROMPTS.md`](../../AI_PROMPTS.md) in the repository root. The changes relevant to this
+sub-project: the scipy dependency was dropped (`normal_ppf` now uses torch's `erfinv`, deviating
+from `scipy.stats.norm.ppf` by 8.9e-16), and a PCA fallback was added for UMAP — the cluster
+environment has neither, and pulling in a whole dependency for one function is not worth it.

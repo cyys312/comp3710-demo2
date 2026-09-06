@@ -1,19 +1,21 @@
 #!/bin/bash
-# Rangpur 作业的公共环境设置，被各个 .slurm 脚本 source。
+# Shared environment setup for Rangpur jobs; sourced by each of the .slurm scripts.
 #
-# 集群实测（2026-09-02，sinfo / module avail 核对）：
-#   * 分区用 a100（10 台 A100-PCIE-40GB）。课程专用的 comp3710 分区
-#     当前对所有人 PENDING(PartitionConfig)，不可用。
-#   * 千万别写 --mem：节点 RealMemory=1，带 --mem 的作业永远排不上。
-#   * torch 装在 conda 环境 torch 里（2.13.0+cu130），自带 CUDA 运行时，
-#     所以不需要 module load cuda —— 加载 12.2 反而可能和自带的 13.0 冲突
-#   * OASIS 数据在 /home/groups/comp3710/OASIS（不是 .../keras_png_slices_data）
+# Measured on the cluster (2026-09-02, cross-checked against sinfo / module avail):
+#   * Use the a100 partition (10 x A100-PCIE-40GB). The course-specific comp3710
+#     partition is stuck in PENDING(PartitionConfig) for everyone and is unusable.
+#   * Never write --mem: the nodes report RealMemory=1, so a job carrying --mem is
+#     never scheduled.
+#   * torch lives in the conda environment named torch (2.13.0+cu130) and ships its
+#     own CUDA runtime, so module load cuda is unnecessary -- loading 12.2 can in fact
+#     clash with the bundled 13.0
+#   * The OASIS data is at /home/groups/comp3710/OASIS (not .../keras_png_slices_data)
 
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate torch
 
 export OASIS_ROOT=/home/groups/comp3710/OASIS
-# CIFAR-10 的共享副本（cifar-10-batches-py 格式，torchvision 可直接读）
+# Shared copy of CIFAR-10 (cifar-10-batches-py layout, read directly by torchvision)
 export CIFAR_ROOT=/home/groups/cifar/CIFAR-10
 
 echo "=============================================="

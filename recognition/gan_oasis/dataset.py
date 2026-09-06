@@ -1,11 +1,12 @@
 """
-Task 3 GAN —— OASIS 脑部 MRI 数据加载
+Task 3 GAN — OASIS brain MRI data loading
 
-与 VAE 的加载器只有一处关键差别：**像素归一化到 [-1, 1] 而不是 [0, 1]**，
-因为生成器最后一层用的是 tanh。真假数据的取值范围必须一致，
-否则判别器只要看数值范围就能分辨，训练会立刻退化。
+One key difference from the VAE loader: **pixels are normalised to [-1, 1], not [0, 1]**,
+because the generator's last layer is a tanh. Real and fake data must span the same range,
+otherwise the discriminator can separate them from the value range alone and training
+degenerates immediately.
 
-GAN 是无监督的，只用原图，不需要 seg_ 标签。
+The GAN is unsupervised: only the raw images are used, the seg_ labels are not needed.
 """
 
 from pathlib import Path
@@ -19,12 +20,12 @@ DEFAULT_ROOT = Path(__file__).resolve().parents[2] / "data" / "keras_png_slices_
 
 
 class OASISImages(Dataset):
-    """返回图像张量 (1, H, W)，像素归一化到 [-1, 1]。"""
+    """Returns image tensors (1, H, W) with pixels normalised to [-1, 1]."""
 
     def __init__(self, root, split: str = "train", image_size: int = 128):
         self.dir = Path(root) / f"keras_png_slices_{split}"
         if not self.dir.exists():
-            raise FileNotFoundError(f"找不到目录 {self.dir}")
+            raise FileNotFoundError(f"directory not found: {self.dir}")
         self.paths = sorted(self.dir.glob("*.png"))
         self.image_size = image_size
 
@@ -41,7 +42,7 @@ class OASISImages(Dataset):
 
 def get_dataloader(root=DEFAULT_ROOT, batch_size: int = 64, image_size: int = 128,
                    num_workers: int = 0, split: str = "train"):
-    """GAN 训练只用训练集；没有验证集的概念（没有似然可以早停）。"""
+    """Training uses the training split only; no validation set, no likelihood to early-stop on."""
     ds = OASISImages(root, split, image_size)
     print(f"{split}: {len(ds)} images", flush=True)
     return DataLoader(ds, batch_size=batch_size, shuffle=True,
@@ -53,4 +54,4 @@ def get_dataloader(root=DEFAULT_ROOT, batch_size: int = 64, image_size: int = 12
 if __name__ == "__main__":
     dl = get_dataloader(batch_size=4)
     x = next(iter(dl))
-    print("batch:", tuple(x.shape), "范围", (x.min().item(), x.max().item()))
+    print("batch:", tuple(x.shape), "range", (x.min().item(), x.max().item()))

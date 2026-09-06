@@ -1,12 +1,13 @@
 """
-Task 1 VAE —— 推理与流形 (manifold) 可视化
+Task 1 VAE — inference and manifold visualisation
 
-三种可视化，评分要求「visualise the resulting manifold」：
-  1. reconstruction —— 原图 vs 重建，检查模型是否学到东西
-  2. grid          —— latent_dim == 2 时，在 [-3,3]^2 网格上解码，直接看流形
-  3. umap          —— 高维隐空间先用 UMAP 降到 2D 再散点（需 pip install umap-learn）
+Three visualisations, as the marking criteria ask to "visualise the resulting manifold":
+  1. reconstruction — originals vs reconstructions, a check that the model learnt something
+  2. grid          — when latent_dim == 2, decode a [-3,3]^2 grid to see the manifold directly
+  3. umap          — high-dimensional latent space reduced to 2D by UMAP, then scattered
+                     (needs pip install umap-learn)
 
-运行:
+Run:
   python recognition/vae_oasis/predict.py --mode umap
 """
 
@@ -27,7 +28,7 @@ HERE = Path(__file__).parent
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, falling back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -36,13 +37,13 @@ def pick_device() -> torch.device:
 
 
 def auto_workers(requested: int, device: torch.device) -> int:
-    """决定 DataLoader 的 worker 数量。
+    """Decide how many DataLoader workers to use.
 
-    实测（M5 Mac，OASIS 256x256）：单张图解码只要 ~1 ms，而多进程 worker
-    的 IPC 序列化开销远大于此 —— num_workers=0 是 9 ms/batch，
-    num_workers=6 反而要 262 ms/batch，慢 29 倍；且 fork 与 MPS 并存时
-    还可能把主进程卡在不可中断等待上。
-    所以：CUDA（集群，CPU 核多、数据在网络盘）用多 worker，其余一律 0。
+    Measured (M5 Mac, OASIS 256x256): decoding one image costs only ~1 ms, while the IPC
+    serialisation overhead of multiprocessing workers dwarfs that — num_workers=0 gives
+    9 ms/batch, num_workers=6 gives 262 ms/batch, 29x slower; fork alongside MPS can also
+    leave the main process wedged in an uninterruptible wait.
+    So: several workers on CUDA (cluster, many cores, data on network storage), 0 elsewhere.
     """
     if requested >= 0:
         return requested
@@ -50,12 +51,12 @@ def auto_workers(requested: int, device: torch.device) -> int:
 
 
 def normal_ppf(q):
-    """标准正态分布的分位数函数（probit）。
+    """Quantile function (probit) of the standard normal distribution.
 
-    等价于 scipy.stats.norm.ppf，但只用 numpy 实现 —— 集群的 conda 环境里
-    没装 scipy，为一个函数拉一整个依赖不值得。
-    ppf(q) = sqrt(2) * erfinv(2q - 1)，erfinv 用 numpy 没有，
-    这里借 torch 的 erfinv（CPU 上算几十个点，开销可以忽略）。
+    Equivalent to scipy.stats.norm.ppf but written with numpy alone — the cluster's conda
+    environment has no scipy, and dragging in a whole dependency for one function is not worth it.
+    ppf(q) = sqrt(2) * erfinv(2q - 1); numpy has no erfinv, so this borrows torch's
+    (a few dozen points on CPU, negligible cost).
     """
     q = torch.as_tensor(np.asarray(q, dtype=np.float64))
     return (torch.sqrt(torch.tensor(2.0, dtype=torch.float64)) *
@@ -76,29 +77,29 @@ def show_reconstructions(model, loader, device, out):
     x = next(iter(loader))[:8].to(device)
     recon, _, _ = model(x)
     save_image(torch.cat([x, recon]), out, nrow=8)
-    print("已保存重建对比:", out)
+    print("saved reconstruction comparison:", out)
 
 
 @torch.no_grad()
 def manifold_grid(model, device, out, n: int = 20):
-    """latent_dim == 2 时，按标准正态分位数铺网格并解码。"""
+    """When latent_dim == 2, tile a grid of standard-normal quantiles and decode it."""
     if model.latent_dim != 2:
-        print(f"latent_dim={model.latent_dim}，网格法只适用于 2 维，改用 --mode umap")
+        print(f"latent_dim={model.latent_dim}: the grid needs 2D, use --mode umap instead")
         return
-    # 按分位数（而不是等距）铺网格：先验是标准正态，等分位数采样
-    # 才能让网格点均匀覆盖概率质量，边缘不会全是没训练过的区域。
+    # Space the grid by quantile rather than uniformly: the prior is standard normal, so equal
+    # quantile steps cover the probability mass evenly and the edges are not untrained territory.
     grid_x = normal_ppf(np.linspace(0.02, 0.98, n))
     grid_y = normal_ppf(np.linspace(0.02, 0.98, n))
     zs = torch.tensor([[xi, yi] for yi in grid_y for xi in grid_x],
                       dtype=torch.float32, device=device)
     imgs = model.decoder(zs).cpu()
     save_image(imgs, out, nrow=n)
-    print("已保存 2D 流形网格:", out)
+    print("saved 2D manifold grid:", out)
 
 
 @torch.no_grad()
 def encode_dataset(model, loader, device, max_batches: int = 20):
-    """把若干个 batch 编码成隐向量矩阵 (N, latent_dim)，取后验均值 mu。"""
+    """Encode a few batches into a latent matrix (N, latent_dim), taking the posterior mean mu."""
     latents = []
     for i, x in enumerate(loader):
         if i >= max_batches:
@@ -109,15 +110,16 @@ def encode_dataset(model, loader, device, max_batches: int = 20):
 
 
 def pca_2d(latents: torch.Tensor):
-    """把隐向量降到 2 维（PCA），返回 (投影, 两个主成分各自解释的方差比例）。
+    """Reduce the latent vectors to 2D (PCA); returns (projection, variance ratio of each PC).
 
-    作为 UMAP 的兜底：集群的 conda 环境里没有 umap-learn，
-    而 PCA 用 torch 的 SVD 就能做，不引入任何额外依赖。
-    对「隐空间有没有连续结构」这个问题，线性投影已经足够说明问题；
-    UMAP 的优势在于保留非线性的邻域结构，有它更好，没有也不影响结论。
+    A fallback for UMAP: the cluster's conda environment has no umap-learn, whereas PCA needs
+    only torch's SVD and pulls in no extra dependency.
+    For the question of whether the latent space has continuous structure, a linear projection
+    already settles it; UMAP's advantage is preserving non-linear neighbourhood structure, which
+    is nicer to have but does not change the conclusion.
     """
     centred = latents - latents.mean(dim=0, keepdim=True)
-    # full_matrices=False 只算需要的奇异向量
+    # full_matrices=False computes only the singular vectors we need
     u, s, _ = torch.linalg.svd(centred, full_matrices=False)
     projected = u[:, :2] * s[:2]
     ratio = (s ** 2 / (s ** 2).sum())[:2]
@@ -126,7 +128,7 @@ def pca_2d(latents: torch.Tensor):
 
 @torch.no_grad()
 def manifold_umap(model, loader, device, out, max_batches: int = 20):
-    """高维隐空间 -> 2D 散点。优先 UMAP，没装就退回 PCA。"""
+    """High-dimensional latent space -> 2D scatter. Prefers UMAP, falls back to PCA if absent."""
     latents = encode_dataset(model, loader, device, max_batches)
 
     try:
@@ -139,7 +141,7 @@ def manifold_umap(model, loader, device, out, max_batches: int = 20):
         method = "PCA"
         subtitle = (f"\nPC1 {ratio[0] * 100:.1f}% + PC2 {ratio[1] * 100:.1f}% "
                     f"= {ratio.sum() * 100:.1f}% of latent variance")
-        print("未装 umap-learn，改用 PCA 投影（结论不受影响）")
+        print("umap-learn not installed, falling back to a PCA projection (conclusion unchanged)")
 
     plt.figure(figsize=(7, 6))
     plt.scatter(embedding[:, 0], embedding[:, 1], s=4, alpha=0.5)
@@ -150,17 +152,17 @@ def manifold_umap(model, loader, device, out, max_batches: int = 20):
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(out, dpi=120)
-    print(f"已保存 {method} 隐空间投影:", out)
+    print(f"saved {method} latent space projection:", out)
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt", type=str, default=str(HERE / "checkpoints" / "vae_z32.pth"),
-                   help="latent_dim=2 的模型用 checkpoints/vae_z2.pth")
+                   help="for the latent_dim=2 model use checkpoints/vae_z2.pth")
     p.add_argument("--data-root", type=str, default=str(DEFAULT_ROOT))
     p.add_argument("--mode", choices=["recon", "grid", "umap", "all"], default="all")
     p.add_argument("--num-workers", type=int, default=-1,
-                   help="-1 表示按设备自动选择（CUDA 用 4，MPS/CPU 用 0）")
+                   help="-1 picks automatically per device (4 on CUDA, 0 on MPS/CPU)")
     args = p.parse_args()
 
     device = pick_device()

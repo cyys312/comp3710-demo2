@@ -1,10 +1,10 @@
 """
-Part 3.1 —— LFW 人脸的 CNN 分类器（PyTorch）
+Part 3.1 — CNN classifier for LFW faces (PyTorch)
 
-要求：两层 3x3 卷积、每层 32 个 filter，接全连接层做分类；
-     效果应优于 Part 2 的 Eigenfaces + 随机森林。
+Requirement: two 3x3 convolution layers with 32 filters each, feeding a fully connected
+             classifier; it should beat the Part 2 Eigenfaces + random forest baseline.
 
-运行: python part3_cnn/cnn_lfw.py
+Run: python part3_cnn/cnn_lfw.py
 """
 
 import numpy as np
@@ -25,7 +25,7 @@ SEED = 42
 
 
 class SimpleCNN(nn.Module):
-    """两层 3x3 / 32 filters 的卷积网络 + 全连接分类头。"""
+    """Two 3x3 / 32-filter convolution layers plus a fully connected classification head."""
 
     def __init__(self, n_classes: int, in_shape: tuple):
         super().__init__()
@@ -34,7 +34,7 @@ class SimpleCNN(nn.Module):
         self.pool = nn.MaxPool2d(2)
         self.dropout = nn.Dropout(0.5)
 
-        # 用一次假前向推出展平后的维度，避免手算
+        # A dummy forward pass recovers the flattened dimension, so it never has to be hand-derived
         with torch.no_grad():
             dummy = torch.zeros(1, 1, *in_shape)
             flat_dim = self._features(dummy).flatten(1).shape[1]
@@ -54,12 +54,12 @@ class SimpleCNN(nn.Module):
 
 
 def load_data():
-    """加载 LFW，归一化到 [0,1] 并整形为 4D 张量 (N, C, H, W)。"""
+    """Load LFW, normalise to [0,1] and reshape into 4D tensors (N, C, H, W)."""
     lfw = fetch_lfw_people(min_faces_per_person=70, resize=0.4)
     n_samples, h, w = lfw.images.shape
     X = lfw.images.astype(np.float32)
-    X = (X - X.min()) / (X.max() - X.min())      # 归一化
-    X = X[:, None, :, :]                          # 加通道维 -> 4D
+    X = (X - X.min()) / (X.max() - X.min())      # normalise
+    X = X[:, None, :, :]                          # add channel dim -> 4D
     y = lfw.target.astype(np.int64)
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -110,7 +110,7 @@ def main():
     y_pred, y_true = evaluate(model, test_loader)
     print("\n--- CNN on LFW ---")
     print(classification_report(y_true, y_pred, target_names=target_names))
-    # TODO: 与 Part 2 的随机森林 F1 对比，在 demo 时解释 CNN 为什么更好
+    # TODO: compare F1 against the Part 2 random forest, and explain in the demo why the CNN wins
 
 
 if __name__ == "__main__":

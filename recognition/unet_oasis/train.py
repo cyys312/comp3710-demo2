@@ -1,9 +1,9 @@
 """
-Task 2 UNet —— 训练脚本
+Task 2 UNet — training script
 
-目标: 所有标签的 DSC > 0.9（验证/测试集）
-运行: python recognition/unet_oasis/train.py --epochs 20
-产物: checkpoints/unet.pth、outputs/loss_curve.png、outputs/dice_curve.png
+Goal:    DSC > 0.9 on every label (validation/test sets)
+Run:     python recognition/unet_oasis/train.py --epochs 20
+Outputs: checkpoints/unet.pth, outputs/loss_curve.png, outputs/dice_curve.png
 """
 
 import argparse
@@ -22,7 +22,7 @@ HERE = Path(__file__).parent
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, falling back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -31,13 +31,13 @@ def pick_device() -> torch.device:
 
 
 def auto_workers(requested: int, device: torch.device) -> int:
-    """决定 DataLoader 的 worker 数量。
+    """Decide how many DataLoader workers to use.
 
-    实测（M5 Mac，OASIS 256x256）：单张图解码只要 ~1 ms，而多进程 worker
-    的 IPC 序列化开销远大于此 —— num_workers=0 是 9 ms/batch，
-    num_workers=6 反而要 262 ms/batch，慢 29 倍；且 fork 与 MPS 并存时
-    还可能把主进程卡在不可中断等待上。
-    所以：CUDA（集群，CPU 核多、数据在网络盘）用多 worker，其余一律 0。
+    Measured (M5 Mac, OASIS 256x256): decoding one image takes only ~1 ms, while the IPC
+    serialisation overhead of worker processes costs far more than that — num_workers=0
+    gives 9 ms/batch, num_workers=6 gives 262 ms/batch, 29x slower; and fork together with
+    MPS can leave the main process stuck in an uninterruptible wait.
+    Hence: workers only on CUDA (cluster, many CPU cores, data on network storage), 0 elsewhere.
     """
     if requested >= 0:
         return requested
@@ -53,19 +53,19 @@ def parse_args():
     p.add_argument("--image-size", type=int, default=256)
     p.add_argument("--base", type=int, default=32)
     p.add_argument("--num-workers", type=int, default=-1,
-                   help="-1 表示按设备自动选择（CUDA 用 4，MPS/CPU 用 0）")
+                   help="-1 means choose automatically per device (4 on CUDA, 0 on MPS/CPU)")
     p.add_argument("--no-amp", action="store_true")
     p.add_argument("--log-every", type=int, default=50,
-                   help="每多少个 step 打印一次进度")
+                   help="print progress every this many steps")
     return p.parse_args()
 
 
 @torch.no_grad()
 def validate(model, loader, device):
-    """整个验证集上的逐类硬 DSC，形状 (C,)。
+    """Per-class hard DSC over the whole validation set, shape (C,).
 
-    交集与基数在全集上累加后再相除，得到数据集级别的 DSC
-    （而不是各 batch DSC 的平均值 —— 两者并不相等）。
+    Intersection and cardinality are accumulated over the full set before dividing, which
+    gives a dataset-level DSC (not the mean of the per-batch DSCs — the two are not equal).
     """
     model.eval()
     inter = torch.zeros(NUM_CLASSES, device=device)
@@ -111,15 +111,15 @@ def main():
             scaler.update()
             running += loss.item()
 
-            # 定期打印步进度：一个 epoch 在 MPS 上要好几分钟，
-            # 没有中间输出的话根本分不清「在算」和「卡死」。
-            # flush=True 是必须的 —— 重定向到文件时 stdout 是块缓冲的。
+            # Print step progress regularly: one epoch takes several minutes on MPS, and with
+            # no intermediate output there is no way to tell "still working" from "hung".
+            # flush=True is not optional — stdout is block-buffered when redirected to a file.
             if step % args.log_every == 0 or step == n_steps:
                 elapsed = time.perf_counter() - epoch_start
                 eta = elapsed / step * (n_steps - step)
                 print(f"  epoch {epoch:3d} [{step:4d}/{n_steps}] "
                       f"loss {running / step:.4f} | {elapsed / step * 1000:.0f} ms/step "
-                      f"| 本轮剩余 ~{eta / 60:.1f} min", flush=True)
+                      f"| epoch remaining ~{eta / 60:.1f} min", flush=True)
         scheduler.step()
 
         dsc = validate(model, val_loader, device)
@@ -148,8 +148,9 @@ def main():
     plt.savefig(HERE / "outputs" / "dice_curve.png", dpi=120)
 
     final = torch.tensor(dices[-1])
-    print(f"\n最佳平均 DSC {best:.4f}")
-    print("全部标签达标 (>0.9)" if (final > 0.9).all() else "仍有标签未达 0.9，需要继续训练/调参")
+    print(f"\nBest mean DSC {best:.4f}")
+    print("All labels meet the target (>0.9)" if (final > 0.9).all()
+          else "Some labels are still below 0.9, keep training or tune the hyperparameters")
 
 
 if __name__ == "__main__":

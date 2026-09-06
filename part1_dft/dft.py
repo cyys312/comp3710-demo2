@@ -1,15 +1,17 @@
 """
-Part 1 of 4 —— 离散傅里叶变换 (Discrete Fourier Transform)
+Part 1 of 4 — Discrete Fourier Transform
 
-任务书要求：
-  1. 用奇次谐波的傅里叶级数重建方波，观察谐波数增加的效果（Gibbs 现象）。
-  2. 把 square_wave / square_wave_fourier / naive_dft 用 PyTorch 张量运算重写。
-  3. 额外做一个显式跑在 GPU 上的 naive_dft（不许用内建 FFT），
-     与 NumPy 朴素 DFT、NumPy FFT 比较耗时，并解释为什么最快的最快。
-  4. 改变数据规模 N，观察三者耗时排序如何变化。
+Task sheet requirements:
+  1. Reconstruct a square wave from a Fourier series of odd harmonics and observe the effect
+     of adding more harmonics (Gibbs phenomenon).
+  2. Rewrite square_wave / square_wave_fourier / naive_dft with PyTorch tensor operations.
+  3. Additionally provide a naive DFT that runs explicitly on the GPU (no built-in FFT),
+     compare its runtime with the NumPy naive DFT and the NumPy FFT, and explain why the
+     fastest one is the fastest.
+  4. Vary the problem size N and observe how the ranking of the three changes.
 
-运行:
-    python part1_dft/dft.py                  # 完整流程（含图）
+Run:
+    python part1_dft/dft.py                  # full pipeline (with plots)
     python part1_dft/dft.py --sizes 256 1024 4096
 """
 
@@ -21,21 +23,21 @@ import matplotlib
 import numpy as np
 import torch
 
-matplotlib.use("Agg")           # 无显示环境（集群/CI）也能出图
-import matplotlib.pyplot as plt  # noqa: E402  必须在 use("Agg") 之后导入
+matplotlib.use("Agg")           # produces plots on headless machines (cluster / CI) too
+import matplotlib.pyplot as plt  # noqa: E402  must be imported after use("Agg")
 
 HERE = Path(__file__).parent
 OUTDIR = HERE / "outputs"
 
-# ------------------------------ 默认参数 ------------------------------
-N_DEFAULT = 2048     # 采样点数
-T = 1.0              # 信号时长（秒）
-F0 = 1.0             # 方波基频 (Hz)
-HARMONICS = [1, 3, 5, 20, 50]   # 重建对比用的谐波个数
+# ------------------------------ Defaults ------------------------------
+N_DEFAULT = 2048     # number of samples
+T = 1.0              # signal duration (seconds)
+F0 = 1.0             # square wave fundamental frequency (Hz)
+HARMONICS = [1, 3, 5, 20, 50]   # harmonic counts used for the reconstruction comparison
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, and fall back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -44,7 +46,7 @@ def pick_device() -> torch.device:
 
 
 def sync(device: torch.device) -> None:
-    """GPU 上的算子是异步下发的，计时前必须同步，否则测到的只是下发时间。"""
+    """GPU kernels launch asynchronously; without this sync you time the launch, not the work."""
     if device.type == "cuda":
         torch.cuda.synchronize()
     elif device.type == "mps":
@@ -52,46 +54,48 @@ def sync(device: torch.device) -> None:
 
 
 # =====================================================================
-# 1. 信号生成 —— NumPy 版与 PyTorch 版
+# 1. Signal generation — NumPy and PyTorch versions
 # =====================================================================
 def square_wave(t: np.ndarray) -> np.ndarray:
-    """理想方波（NumPy）。"""
+    """Ideal square wave (NumPy)."""
     return np.sign(np.sin(2.0 * np.pi * F0 * t))
 
 
 def square_wave_torch(t: torch.Tensor, f0: float = F0) -> torch.Tensor:
-    """理想方波（PyTorch）。与 NumPy 版逐点等价，只是换成张量算子。"""
+    """Ideal square wave (PyTorch). Pointwise identical to the NumPy version, tensor ops only."""
     return torch.sign(torch.sin(2.0 * torch.pi * f0 * t))
 
 
 def square_wave_fourier(t: np.ndarray, f0: float, n_harmonics: int) -> np.ndarray:
-    """方波的傅里叶级数近似（NumPy）：只含奇次谐波，幅度按 1/n 衰减。"""
+    """Fourier series approximation of a square wave (NumPy): odd harmonics, 1/n amplitudes."""
     result = np.zeros_like(t)
     for k in range(n_harmonics):
-        n = 2 * k + 1                       # 奇次谐波 1, 3, 5, ...
+        n = 2 * k + 1                       # odd harmonics 1, 3, 5, ...
         result += np.sin(2 * np.pi * n * f0 * t) / n
     return (4 / np.pi) * result
 
 
 def square_wave_fourier_torch(t: torch.Tensor, f0: float, n_harmonics: int) -> torch.Tensor:
-    """方波的傅里叶级数近似（PyTorch）。
+    """Fourier series approximation of a square wave (PyTorch).
 
-    这里把 Python 的 for 循环换成了广播：把谐波次数 n 摆成一列，
-    与时间 t 做外积后按谐波维求和，一次算完所有谐波。
+    The Python for loop is replaced by broadcasting: the harmonic orders n are laid out as a
+    column, outer-multiplied with the time axis t and summed over the harmonic dimension, so
+    every harmonic is computed in one go.
     """
     n = torch.arange(1, 2 * n_harmonics, 2, device=t.device, dtype=t.dtype)   # 1,3,5,...
-    # (n_harmonics, 1) * (1, N) -> (n_harmonics, N)，再沿谐波维求和
+    # (n_harmonics, 1) * (1, N) -> (n_harmonics, N), then sum along the harmonic dimension
     terms = torch.sin(2 * torch.pi * n[:, None] * f0 * t[None, :]) / n[:, None]
     return (4 / torch.pi) * terms.sum(dim=0)
 
 
 # =====================================================================
-# 2. DFT 的几种实现
+# 2. DFT implementations
 # =====================================================================
 def naive_dft_loops(x: np.ndarray) -> np.ndarray:
-    """教科书式的朴素 DFT：双重 Python 循环，严格 O(N^2)。
+    """Textbook naive DFT: two nested Python loops, strictly O(N^2).
 
-    只在很小的 N 上跑，用来说明「同样是 O(N^2)，实现方式差几百倍」。
+    Only run for very small N; it exists to show that two implementations of the same O(N^2)
+    algorithm can still differ by a factor of several hundred.
     """
     n_samples = len(x)
     out = np.zeros(n_samples, dtype=np.complex128)
@@ -102,40 +106,41 @@ def naive_dft_loops(x: np.ndarray) -> np.ndarray:
 
 
 def _dft_matrix_np(n_samples: int) -> np.ndarray:
-    """DFT 矩阵 W[k,n] = e^{-2j*pi*k*n/N}（NumPy）。"""
+    """DFT matrix W[k,n] = e^{-2j*pi*k*n/N} (NumPy)."""
     idx = np.arange(n_samples)
     return np.exp(-2j * np.pi * np.outer(idx, idx) / n_samples)
 
 
 def naive_dft(x: np.ndarray) -> np.ndarray:
-    """朴素 DFT（NumPy 矩阵形式）。
+    """Naive DFT (NumPy, matrix form).
 
-    数学上就是矩阵-向量乘 X = W x，仍是 O(N^2) 次复数乘加，
-    但循环下沉到 BLAS，比双重 Python 循环快两三个数量级。
+    Mathematically just the matrix-vector product X = W x, still O(N^2) complex multiply-adds,
+    but the loops now sit inside BLAS, which is two to three orders of magnitude faster than
+    the nested Python loops.
     """
     return _dft_matrix_np(len(x)) @ x
 
 
 def naive_dft_torch(x: torch.Tensor) -> torch.Tensor:
-    """朴素 DFT（PyTorch，显式构造 DFT 矩阵，不调用 torch.fft）。
+    """Naive DFT (PyTorch, DFT matrix built explicitly, no call to torch.fft).
 
-    传入的 x 在哪个 device 上，整个计算就在哪个 device 上完成 ——
-    传入 GPU 张量即为「GPU 版 naive DFT」。仍然是 O(N^2)，
-    但 N^2 次乘加会被摊到数千个 GPU 核心上并行执行。
+    The whole computation happens on whatever device x lives on — pass a GPU tensor and this
+    is the GPU naive DFT. It is still O(N^2), but the N^2 multiply-adds are spread over
+    thousands of GPU cores and run in parallel.
     """
     n_samples = x.shape[-1]
     idx = torch.arange(n_samples, device=x.device, dtype=torch.float32)
     angle = -2.0 * torch.pi * idx[:, None] * idx[None, :] / n_samples
-    # 用 cos/sin 组装复数矩阵，避免依赖后端的复数指数算子
+    # Build the complex matrix from cos/sin to avoid depending on a backend complex exp
     w = torch.complex(torch.cos(angle), torch.sin(angle))
     return w @ x.to(torch.complex64)
 
 
 # =====================================================================
-# 3. 计时基准
+# 3. Timing benchmark
 # =====================================================================
 def _time_it(fn, repeats: int, device: torch.device | None = None) -> float:
-    """跑 repeats 次取最小值（最小值比均值更抗系统噪声）。"""
+    """Run repeats times and keep the minimum (more robust to system noise than the mean)."""
     best = float("inf")
     for _ in range(repeats):
         start = time.perf_counter()
@@ -147,7 +152,7 @@ def _time_it(fn, repeats: int, device: torch.device | None = None) -> float:
 
 
 def benchmark(sizes, device: torch.device, repeats: int = 3):
-    """对每个 N 比较四种方法的耗时，返回 {方法名: [耗时,...]}。"""
+    """Time the four methods for every N; returns {method name: [time, ...]}."""
     methods = ["NumPy naive DFT", f"Torch naive DFT ({device.type})",
                "NumPy FFT", f"Torch FFT ({device.type})"]
     results = {m: [] for m in methods}
@@ -157,7 +162,8 @@ def benchmark(sizes, device: torch.device, repeats: int = 3):
         signal_np = square_wave_fourier(t_np, F0, 50)
         signal_gpu = torch.from_numpy(signal_np).float().to(device)
 
-        # 预热：首次调用包含 kernel 编译/显存分配，不能计入
+        # Warm-up: the first call includes kernel compilation and memory allocation, so it
+        # must not be timed
         naive_dft_torch(signal_gpu); sync(device)
         torch.fft.fft(signal_gpu); sync(device)
 
@@ -170,16 +176,16 @@ def benchmark(sizes, device: torch.device, repeats: int = 3):
 
 
 def print_benchmark(sizes, results) -> None:
-    """打印耗时表，并对每个 N 给出「由快到慢」的排序。"""
+    """Print the timing table and a fastest-to-slowest ranking for each N."""
     names = list(results)
     width = max(len(n) for n in names) + 2
-    print("\n--- DFT 耗时对比（秒，取 3 次最小值）---")
+    print("\n--- DFT timing comparison (seconds, best of 3) ---")
     print(" " * width + "".join(f"N={n:<12d}" for n in sizes))
     for name in names:
         row = "".join(f"{v:<14.6f}" for v in results[name])
         print(f"{name:<{width}}{row}")
 
-    print("\n--- 每个 N 下由快到慢的排序 ---")
+    print("\n--- Ranking from fastest to slowest for each N ---")
     for i, n_samples in enumerate(sizes):
         order = sorted(names, key=lambda m: results[m][i])
         print(f"N={n_samples:<6d} " + "  <  ".join(f"{m} ({results[m][i]*1e3:.2f} ms)"
@@ -187,10 +193,10 @@ def print_benchmark(sizes, results) -> None:
 
 
 # =====================================================================
-# 4. 绘图
+# 4. Plotting
 # =====================================================================
 def plot_reconstructions(t, square, path):
-    """谐波数从 1 增到 50：逼近越来越好，但跳变处的过冲（Gibbs 现象）不会消失。"""
+    """Harmonics 1 to 50: the fit keeps improving, but the Gibbs overshoot at the jumps stays."""
     fig, axes = plt.subplots(2, 3, figsize=(12, 8))
     axes = axes.ravel()
 
@@ -210,11 +216,11 @@ def plot_reconstructions(t, square, path):
 
     fig.tight_layout()
     fig.savefig(path, dpi=120)
-    print("已保存:", path)
+    print("Saved:", path)
 
 
 def plot_spectrum(t, signal, dft_result, n_samples, path):
-    """时域信号与其单边幅度谱：应当只在奇次谐波处出现峰值。"""
+    """Time-domain signal and its single-sided magnitude spectrum: peaks at odd harmonics only."""
     xf = np.fft.fftfreq(n_samples, d=T / n_samples)[: n_samples // 2]
     magnitude = 2.0 / n_samples * np.abs(dft_result[: n_samples // 2])
 
@@ -225,7 +231,7 @@ def plot_spectrum(t, signal, dft_result, n_samples, path):
     ax1.grid(True)
 
     ax2.stem(xf[:60], magnitude[:60], basefmt=" ")
-    for k in range(1, 12, 2):        # 标出前几个奇次谐波的位置
+    for k in range(1, 12, 2):        # mark where the first few odd harmonics sit
         ax2.axvline(k * F0, color="r", ls="--", alpha=0.4)
     ax2.set_title("Frequency domain: naive DFT magnitude (odd harmonics only)")
     ax2.set_xlabel("Frequency [Hz]")
@@ -233,11 +239,11 @@ def plot_spectrum(t, signal, dft_result, n_samples, path):
 
     fig.tight_layout()
     fig.savefig(path, dpi=120)
-    print("已保存:", path)
+    print("Saved:", path)
 
 
 def plot_timings(sizes, results, path):
-    """双对数坐标下的耗时曲线：O(N^2) 与 O(N log N) 的斜率差一眼可见。"""
+    """Runtimes on log-log axes: the slope gap between O(N^2) and O(N log N) is obvious."""
     fig, ax = plt.subplots(figsize=(8, 6))
     for name, times in results.items():
         ax.plot(sizes, times, "o-", label=name)
@@ -250,64 +256,66 @@ def plot_timings(sizes, results, path):
     ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=120)
-    print("已保存:", path)
+    print("Saved:", path)
 
 
 # =====================================================================
-# 5. 主流程
+# 5. Main pipeline
 # =====================================================================
 def main():
     parser = argparse.ArgumentParser(description="Part 1: DFT / FFT")
     parser.add_argument("--sizes", type=int, nargs="+", default=[256, 512, 1024, 2048, 4096],
-                        help="基准测试用的信号长度")
+                        help="signal lengths used for the benchmark")
     parser.add_argument("--loop-n", type=int, default=512,
-                        help="双重循环版 naive DFT 的规模（很慢，别设大）")
+                        help="size of the double-loop naive DFT run (very slow, keep it small)")
     args = parser.parse_args()
 
     OUTDIR.mkdir(exist_ok=True)
     device = pick_device()
     print(f"PyTorch {torch.__version__} | device = {device}")
 
-    # ---- (a) 方波重建 ----
+    # ---- (a) square wave reconstruction ----
     t = np.linspace(0.0, T, N_DEFAULT, endpoint=False)
     square = square_wave(t)
     plot_reconstructions(t, square, OUTDIR / "square_wave_reconstruction.png")
 
-    # ---- (b) NumPy 与 PyTorch 实现的一致性检查 ----
+    # ---- (b) agreement between the NumPy and PyTorch implementations ----
     t_torch = torch.from_numpy(t).float().to(device)
     max_diff_wave = (square_wave_torch(t_torch).cpu().numpy() - square).max()
     sig_np = square_wave_fourier(t, F0, 50)
     sig_torch = square_wave_fourier_torch(t_torch, F0, 50).cpu().numpy()
-    print("\n--- NumPy vs PyTorch 实现一致性 ---")
-    print(f"square_wave         最大偏差: {abs(max_diff_wave):.3e}")
-    print(f"square_wave_fourier 最大偏差: {np.abs(sig_torch - sig_np).max():.3e}")
+    print("\n--- NumPy vs PyTorch implementation agreement ---")
+    print(f"square_wave         max deviation: {abs(max_diff_wave):.3e}")
+    print(f"square_wave_fourier max deviation: {np.abs(sig_torch - sig_np).max():.3e}")
 
     dft_np = naive_dft(sig_np)
     dft_gpu = naive_dft_torch(torch.from_numpy(sig_np).float().to(device)).cpu().numpy()
     fft_np = np.fft.fft(sig_np)
-    # 误差要看相对量：谱峰幅度约 4N/pi ~ 1e3，绝对误差 0.2 其实只有 ~1e-4 的相对误差。
+    # Judge the error in relative terms: the spectral peaks are around 4N/pi ~ 1e3, so an
+    # absolute error of 0.2 is really only a ~1e-4 relative error.
     scale = np.abs(fft_np).max()
     rel_np = np.abs(dft_np - fft_np).max() / scale
     rel_gpu = np.abs(dft_gpu - fft_np).max() / scale
-    print(f"naive_dft(NumPy, complex128) vs np.fft.fft: 相对误差 {rel_np:.2e}  "
+    print(f"naive_dft(NumPy, complex128) vs np.fft.fft: relative error {rel_np:.2e}  "
           f"allclose={np.allclose(dft_np, fft_np)}")
-    print(f"naive_dft(GPU,  complex64)  vs np.fft.fft: 相对误差 {rel_gpu:.2e}  "
-          f"(单精度累加 N 项的必然结果，仍在 float32 的 ~1e-7*sqrt(N) 量级内)")
+    print(f"naive_dft(GPU,  complex64)  vs np.fft.fft: relative error {rel_gpu:.2e}  "
+          f"(unavoidable when accumulating N terms in single precision, still within the "
+          f"~1e-7*sqrt(N) float32 range)")
 
     plot_spectrum(t, sig_np, dft_np, N_DEFAULT, OUTDIR / "dft_spectrum.png")
 
-    # ---- (c) 双重循环版有多慢 ----
+    # ---- (c) how slow the double-loop version really is ----
     small = sig_np[: args.loop_n]
     start = time.perf_counter()
     loop_result = naive_dft_loops(small)
     loop_time = time.perf_counter() - start
     matrix_time = _time_it(lambda: naive_dft(small), 3)
-    print(f"\n--- 同为 O(N^2)，实现方式的差距 (N={args.loop_n}) ---")
-    print(f"双重 Python 循环 : {loop_time:.4f} s")
-    print(f"NumPy 矩阵形式   : {matrix_time:.6f} s  ({loop_time / matrix_time:.0f}x 更快)")
-    print(f"两者结果一致     : {np.allclose(loop_result, naive_dft(small))}")
+    print(f"\n--- Same O(N^2), different implementations (N={args.loop_n}) ---")
+    print(f"Nested Python loops : {loop_time:.4f} s")
+    print(f"NumPy matrix form   : {matrix_time:.6f} s  ({loop_time / matrix_time:.0f}x faster)")
+    print(f"Results agree       : {np.allclose(loop_result, naive_dft(small))}")
 
-    # ---- (d) 规模扫描 ----
+    # ---- (d) size sweep ----
     results = benchmark(args.sizes, device)
     print_benchmark(args.sizes, results)
     plot_timings(args.sizes, results, OUTDIR / "dft_timing.png")

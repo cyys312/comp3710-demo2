@@ -1,117 +1,134 @@
 # Task 3 — GAN Generation of OASIS Brain MRI
 
-> COMP3710 Lab 2, Part 4 · Hard difficulty（三个任务全做，上限 7/7 分）
+> COMP3710 Lab 2, Part 4 · Hard difficulty (all three tasks attempted, capped at 7/7 marks)
 
-## 问题描述
+## Problem statement
 
-用生成对抗网络生成 Preprocessed OASIS 脑部 MR 图像。任务书要求：
-图像要足够真实，要提供训练证据（生成样本、损失曲线等），
-并且 **mode collapse（模式崩塌）等问题必须彻底解决**。
+Generate Preprocessed OASIS brain MR images with a generative adversarial network. The task sheet
+requires the images to be convincingly realistic, requires evidence of training (generated
+samples, loss curves and so on), and states that **problems such as mode collapse must be fully
+resolved**.
 
-## 结果
+## Results
 
-Rangpur `a100` 分区，NVIDIA A100-PCIE-40GB，作业 `581557`：
-128×128 分辨率，80 个 epoch，约 6 秒/epoch，**共 9.0 分钟**。
+Rangpur `a100` partition, NVIDIA A100-PCIE-40GB, job `581557`:
+128×128 resolution, 80 epochs, about 6 s/epoch, **9.0 minutes in total**.
 
-| 指标 | 训练结束时 | 独立复核（`predict.py`） |
+| Metric | End of training | Independent check (`predict.py`) |
 |---|---|---|
-| 生成样本多样性（两两平均 L2 距离） | 26.20 | 26.70 |
-| 真实样本同一指标（基准） | 31.24 | 30.31 |
-| **比值** | **84 %** | **88 %** |
-| 判定 | 无明显 mode collapse | 无明显 mode collapse |
+| Diversity score of generated samples (mean pairwise L2 distance) | 26.20 | 26.70 |
+| Same score on real samples (baseline) | 31.24 | 30.31 |
+| **Ratio** | **84 %** | **88 %** |
+| Verdict | no significant mode collapse | no significant mode collapse |
 
-两列的差别在于**真实数据的基准取自哪里**：训练时用的是当轮最后一个训练 batch，
-`predict.py` 用的是**测试集**（544 张，完全没参与训练）。后者是更干净的对照，
-结论一致且略好，说明这个指标本身是稳的，不是挑出来的数字。
+The two columns differ in **where the real-data baseline comes from**: during training it is the
+last training batch of that epoch, whereas `predict.py` uses the **test set** (544 images that
+never took part in training). The latter is the cleaner control; it agrees with the training
+figure and is slightly better, which shows the score itself is stable rather than a cherry-picked
+number.
 
-多样性随训练的变化（`outputs/diversity_curve.png`）：
+Diversity across training (`outputs/diversity_curve.png`):
 
 | epoch | 6 | 10 | 15 | 45 | 75 | 80 |
 |---|---|---|---|---|---|---|
-| 占真实数据比例 | 24 % | 44 % | 65 % | 84–90 % | 88 % | 84 % |
+| fraction of the real-data score | 24 % | 44 % | 65 % | 84–90 % | 88 % | 84 % |
 
-**这条 V 形曲线值得解释**：训练初期生成器先学到的是"平均脑"——
-所有样本长得几乎一样，所以多样性一路跌到 24 %。之后它才开始学习变化，
-指标回升并稳定在 85 % 上下。**先跌后升是正常的；一直不回升才是 mode collapse。**
+**This V-shaped curve is worth explaining**: early in training the generator first learns the
+"average brain" — every sample looks almost the same, so diversity falls all the way to 24 %.
+Only then does it start learning variation, and the score recovers and settles around 85 %.
+**Falling before rising is normal; never recovering is mode collapse.**
 
-## 为什么不是朴素 DCGAN
+## Why not a naive DCGAN
 
-任务书明确警告 GAN 收敛混乱。这里用了五项针对性措施，每一项对应一个具体失败模式：
+The task sheet explicitly warns that GAN convergence is messy. Five targeted measures are used
+here, each aimed at one specific failure mode:
 
-| 措施 | 针对的失败模式 |
+| Measure | Failure mode it targets |
 |---|---|
-| **R1 梯度惩罚**（只在真实样本上，每 16 步一次） | 判别器过强 → 生成器梯度消失。R1 把判别器约束成局部 Lipschitz；相比 WGAN-GP 不需要在真假样本间插值，更省算力 |
-| **生成器权重 EMA** | 单步权重震荡导致样本质量忽好忽坏。采样用滑动平均权重，画面明显更稳 |
-| **TTUR**（D 学习率 3e-4 > G 的 2e-4） | 两个网络更新速度失衡 |
-| **真实标签平滑到 0.9** | 判别器把置信度推到饱和区，梯度趋近 0 |
-| **判别器用 InstanceNorm 而非 BatchNorm** | BatchNorm 让同一 batch 内的样本互相耦合，是 GAN 里已知的不稳定来源 |
+| **R1 gradient penalty** (on real samples only, every 16 steps) | Discriminator too strong → vanishing generator gradients. R1 constrains the discriminator to be locally Lipschitz; unlike WGAN-GP it needs no interpolation between real and fake samples, so it costs less compute |
+| **EMA of the generator weights** | Single-step weight oscillation makes sample quality swing. Sampling from the moving-average weights gives visibly steadier images |
+| **TTUR** (D learning rate 3e-4 > G's 2e-4) | The two networks updating at mismatched speeds |
+| **Real labels smoothed to 0.9** | The discriminator driving its confidence into saturation, where gradients approach 0 |
+| **InstanceNorm instead of BatchNorm in the discriminator** | BatchNorm couples samples within a batch to each other, a known source of instability in GANs |
 
-另外损失用**非饱和形式**（最大化 `log D(G(z))` 而非最小化 `log(1-D(G(z)))`）——
-后者在训练初期判别器很强时梯度几乎为 0，这是原始 GAN 论文就指出的问题。
+The loss also uses the **non-saturating form** (maximise `log D(G(z))` rather than minimise
+`log(1-D(G(z)))`) — the latter's gradient is almost 0 early in training while the discriminator is
+strong, a problem already pointed out in the original GAN paper.
 
-## 怎么证明没有 mode collapse
+## How mode collapse is ruled out
 
-「生成的图好不好看」是主观的，所以本项目用两条**客观依据**：
+"Do the images look good" is subjective, so this project rests on two **objective** lines of
+evidence:
 
-1. **多样性指标**（`modules.diversity_score`）：随机取样本两两配对算平均 L2 距离，
-   与真实数据的同一指标做比值。崩塌的生成器样本彼此近乎相同，这个数会远低于真实数据。
-   实测 84 %，且逐 epoch 记录成曲线。
-2. **隐空间插值**（`outputs/interpolation.png`）：在两个隐向量之间线性插值并逐点解码，
-   共 8 行、每行 10 步。崩塌的生成器会在途中**突变**（从一个模式硬切到另一个）；
-   健康的生成器应当平滑过渡。
-   **实际结果**：每一行都是连续形变——脑室从宽变窄、从蝶形收成裂缝，
-   颅骨轮廓同步微调，全程没有任何突跳。这与 88 % 的多样性指标互相印证。
+1. **Diversity score** (`modules.diversity_score`): draw random samples, pair them up and take
+   the mean L2 distance, then form the ratio against the same score on real data. A collapsed
+   generator produces near-identical samples, so this number falls far below the real data.
+   Measured at 84 %, and recorded epoch by epoch as a curve.
+2. **Latent-space interpolation** (`outputs/interpolation.png`): interpolate linearly between two
+   latent vectors and decode point by point, 8 rows of 10 steps each. A collapsed generator
+   **jumps** part way along (hard-switching from one mode to another); a healthy one should
+   transition smoothly.
+   **What actually happens**: every row is a continuous deformation — the ventricles go from wide
+   to narrow, contracting from a butterfly shape into a slit, while the skull outline adjusts in
+   step, with no jumps anywhere. This corroborates the 88 % diversity score.
 
-## 已知的局限（demo 时主动说）
+## Known limitations (raise these during the demo)
 
-- **样本的左右对称性偏强**。真实脑切片是近似对称而非严格对称，
-  生成样本里有一部分对称得过于工整。原因大概率是数据本身经过配准（registration）
-  且 128×128 分辨率下细微的不对称信息有限，生成器学到了"对称"这个捷径。
-- **只覆盖了中部轴位层面**。这是忠实反映训练数据的——
-  Preprocessed OASIS 的切片本身就集中在这个范围，不是模型的缺陷。
-- **没有做 FID 之类的标准指标**。多样性指标能证明"没有崩塌"，
-  但不能完整衡量"有多真实"；后者本课程由演示老师主观判定。
+- **The samples are too left-right symmetric.** Real brain slices are approximately, not strictly,
+  symmetric, and some of the generated samples are symmetric to an implausibly neat degree. The
+  likely cause is that the data itself has been registered and that 128×128 leaves little fine
+  asymmetric detail, so the generator learned "symmetry" as a shortcut.
+- **Only mid-axial slices are covered.** This faithfully reflects the training data — Preprocessed
+  OASIS slices are themselves concentrated in that range — rather than being a flaw of the model.
+- **No standard metric such as FID.** The diversity score can establish "no collapse" but cannot
+  fully measure "how realistic"; in this course the latter is judged subjectively by the
+  demonstrator.
 
-## 数据
+## Data
 
-沿用数据集自带划分的训练集（9664 张）。与 VAE 的加载器只有一处关键差别：
-**像素归一化到 [-1, 1] 而不是 [0, 1]**，因为生成器最后一层是 tanh。
-真假数据的取值范围必须一致，否则判别器只要看数值范围就能分辨，训练会立刻退化。
+Uses the training split shipped with the dataset (9664 images). There is one crucial difference
+from the VAE loader: **pixels are normalised to [-1, 1] rather than [0, 1]**, because the last
+layer of the generator is a tanh. Real and fake data must share the same value range, otherwise
+the discriminator can tell them apart from the range alone and training degenerates immediately.
 
-GAN 是无监督的，`keras_png_slices_seg_*` 标签不参与训练。
-GAN 没有可用于早停的验证似然，因此不划分验证集。
+The GAN is unsupervised, so the `keras_png_slices_seg_*` labels take no part in training.
+A GAN has no validation likelihood to early-stop on, so no validation split is made.
 
-## 运行
+## Running
 
 ```bash
-# 集群（推荐，9 分钟跑完）
+# Cluster (recommended, finishes in 9 minutes)
 sbatch slurm/gan.slurm
 sbatch --export=ALL,ONLY=gan slurm/predict.slurm
 
-# 本机
+# Local
 python recognition/gan_oasis/train.py --epochs 80
 python recognition/gan_oasis/predict.py --n 64
 ```
 
-## 图（`outputs/`）
+## Figures (`outputs/`)
 
-- `samples_epoch{005..080}.png` — 固定噪声下生成样本随训练的演化（训练证据）
-- `loss_curve.png` — 判别器/生成器损失
-- `diversity_curve.png` — **多样性指标 vs 真实数据基准（mode collapse 的量化证据）**
-- `generated_samples.png` — 最终生成的脑图网格
-- `interpolation.png` — 隐空间插值
+- `samples_epoch{005..080}.png` — fixed-noise samples across training (evidence of training)
+- `loss_curve.png` — discriminator/generator losses
+- `diversity_curve.png` — **diversity score vs the real-data baseline (quantitative evidence on
+  mode collapse)**
+- `generated_samples.png` — final grid of generated brain images
+- `interpolation.png` — latent-space interpolation
 
-## Demo 要点
+## Demo notes
 
-- 解释 GAN 的极小极大博弈，以及为什么它比 VAE 难训练
-  （没有可优化的单一目标，两个网络在互相追逐一个移动的靶子）
-- 解释为什么用非饱和损失而不是原始论文的形式
-- **重点讲 mode collapse 怎么判定**：不是看图好不好看，而是多样性指标 84 %
-  和插值图的平滑过渡；并解释 V 形曲线为什么正常
-- 解释 R1 惩罚在做什么，以及为什么"惰性"地每 16 步做一次而不是每步
-- 与 Task 1 的 VAE 对比：VAE 有显式似然、训练稳定但生成偏糊；
-  GAN 无显式似然、训练不稳但细节更锐利
+- Explain the GAN minimax game, and why it is harder to train than a VAE
+  (there is no single objective to optimise; two networks chase each other after a moving target)
+- Explain why the non-saturating loss is used instead of the form in the original paper
+- **Focus on how mode collapse is judged**: not by how good the images look, but by the 84 %
+  diversity score and the smooth transitions in the interpolation figure; and explain why the
+  V-shaped curve is normal
+- Explain what the R1 penalty does, and why it is applied "lazily" every 16 steps rather than
+  every step
+- Contrast with the VAE of Task 1: the VAE has an explicit likelihood and trains stably but
+  generates blurrier images; the GAN has no explicit likelihood and trains less stably, but its
+  detail is sharper
 
 ## AI usage
 
-见仓库根目录的 [`AI_PROMPTS.md`](../../AI_PROMPTS.md)。
+See [`AI_PROMPTS.md`](../../AI_PROMPTS.md) in the repository root.

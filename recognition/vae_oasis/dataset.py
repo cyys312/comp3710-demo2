@@ -1,14 +1,14 @@
 """
-Task 1 VAE —— OASIS 脑部 MRI 数据加载
+Task 1 VAE — OASIS brain MRI data loading
 
-数据目录（本地解压后）:
+Data directory (after extracting locally):
     data/keras_png_slices_data/
-        keras_png_slices_train/      原图 case_XXX_slice_Y.nii.png
+        keras_png_slices_train/      raw slices case_XXX_slice_Y.nii.png
         keras_png_slices_validate/
         keras_png_slices_test/
-Rangpur 集群上位于 /home/groups/comp3710/keras_png_slices_data/
+On the Rangpur cluster this lives at /home/groups/comp3710/keras_png_slices_data/
 
-VAE 是无监督的，只用原图，不需要 seg_ 标签。
+The VAE is unsupervised: it uses the raw slices only and needs no seg_ labels.
 """
 
 from pathlib import Path
@@ -18,17 +18,17 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
-# 本地默认路径：相对仓库根目录
+# Default local path: relative to the repository root
 DEFAULT_ROOT = Path(__file__).resolve().parents[2] / "data" / "keras_png_slices_data"
 
 
 class OASISImages(Dataset):
-    """只返回图像张量 (1, H, W)，像素归一化到 [0, 1]。"""
+    """Returns the image tensor (1, H, W) only, with pixels normalised to [0, 1]."""
 
     def __init__(self, root, split: str = "train", image_size: int = 128):
         self.dir = Path(root) / f"keras_png_slices_{split}"
         if not self.dir.exists():
-            raise FileNotFoundError(f"找不到目录 {self.dir}，请先解压数据集")
+            raise FileNotFoundError(f"directory {self.dir} not found, extract the dataset first")
         self.paths = sorted(self.dir.glob("*.png"))
         self.image_size = image_size
 

@@ -1,11 +1,11 @@
 """
-Task 1 VAE —— 模型定义
+Task 1 VAE — model definitions
 
-VAE = 编码器 q(z|x) -> 重参数化采样 z -> 解码器 p(x|z)
-损失 = 重建误差 + KL 散度（把后验拉向标准正态先验）
+VAE = encoder q(z|x) -> reparameterised sample z -> decoder p(x|z)
+Loss = reconstruction error + KL divergence (pulls the posterior towards the standard normal prior)
 
-TODO: 若要用 2D 网格直接可视化 manifold（流形），把 latent_dim 设为 2；
-      更高维（如 16/32）重建更清晰，但需要 UMAP 降维后再画。
+TODO: to visualise the manifold directly on a 2D grid, set latent_dim to 2;
+      higher dimensions (16/32) reconstruct more sharply but need UMAP before plotting.
 """
 
 import torch
@@ -14,7 +14,7 @@ import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
-    """4 次 stride=2 卷积把 128x128 压到 8x8，再输出 mu 与 logvar。"""
+    """Four stride=2 convolutions squeeze 128x128 down to 8x8, then emit mu and logvar."""
 
     def __init__(self, latent_dim: int = 32, base: int = 32, image_size: int = 128):
         super().__init__()
@@ -35,7 +35,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    """与编码器对称的转置卷积上采样。"""
+    """Transposed-convolution upsampling, mirroring the encoder."""
 
     def __init__(self, latent_dim: int = 32, base: int = 32, image_size: int = 128):
         super().__init__()
@@ -50,7 +50,7 @@ class Decoder(nn.Module):
 
     def forward(self, z):
         h = self.fc(z).view(-1, self.base * 8, self.feat_size, self.feat_size)
-        return torch.sigmoid(self.net(h))      # 输出映射回 [0,1]
+        return torch.sigmoid(self.net(h))      # map the output back to [0,1]
 
 
 class VAE(nn.Module):
@@ -62,7 +62,7 @@ class VAE(nn.Module):
 
     @staticmethod
     def reparameterise(mu, logvar):
-        """重参数化技巧：z = mu + sigma * eps，让采样这一步可导。"""
+        """Reparameterisation trick: z = mu + sigma * eps, which keeps sampling differentiable."""
         std = torch.exp(0.5 * logvar)
         return mu + std * torch.randn_like(std)
 
@@ -73,7 +73,7 @@ class VAE(nn.Module):
 
 
 def vae_loss(recon, x, mu, logvar, beta: float = 1.0):
-    """ELBO 的负值：重建项 (BCE) + beta * KL 项。返回 (总损失, 重建, KL)。"""
+    """Negative ELBO: reconstruction term (BCE) + beta * KL term. Returns (total, recon, KL)."""
     recon_loss = F.binary_cross_entropy(recon, x, reduction="sum") / x.size(0)
     kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / x.size(0)
     return recon_loss + beta * kl, recon_loss, kl

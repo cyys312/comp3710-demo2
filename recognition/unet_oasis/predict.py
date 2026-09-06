@@ -1,8 +1,8 @@
 """
-Task 2 UNet —— 测试集推理与可视化（demo 现场要跑这个）
+Task 2 UNet — test-set inference and visualisation (this is the one run during the demo)
 
-运行: python recognition/unet_oasis/predict.py --n-show 4
-产物: outputs/segmentation_examples.png、逐类 DSC 打印
+Run:     python recognition/unet_oasis/predict.py --n-show 4
+Outputs: outputs/segmentation_examples.png, per-class DSC printed to the terminal
 """
 
 import argparse
@@ -20,7 +20,7 @@ HERE = Path(__file__).parent
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, falling back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -29,13 +29,13 @@ def pick_device() -> torch.device:
 
 
 def auto_workers(requested: int, device: torch.device) -> int:
-    """决定 DataLoader 的 worker 数量。
+    """Decide how many DataLoader workers to use.
 
-    实测（M5 Mac，OASIS 256x256）：单张图解码只要 ~1 ms，而多进程 worker
-    的 IPC 序列化开销远大于此 —— num_workers=0 是 9 ms/batch，
-    num_workers=6 反而要 262 ms/batch，慢 29 倍；且 fork 与 MPS 并存时
-    还可能把主进程卡在不可中断等待上。
-    所以：CUDA（集群，CPU 核多、数据在网络盘）用多 worker，其余一律 0。
+    Measured (M5 Mac, OASIS 256x256): decoding one image takes only ~1 ms, while the IPC
+    serialisation overhead of worker processes costs far more than that — num_workers=0
+    gives 9 ms/batch, num_workers=6 gives 262 ms/batch, 29x slower; and fork together with
+    MPS can leave the main process stuck in an uninterruptible wait.
+    Hence: workers only on CUDA (cluster, many CPU cores, data on network storage), 0 elsewhere.
     """
     if requested >= 0:
         return requested
@@ -48,7 +48,7 @@ def load_model(ckpt_path, device):
     model = UNet(1, NUM_CLASSES, saved.get("base", 32)).to(device)
     model.load_state_dict(state["model"])
     model.eval()
-    print(f"载入 checkpoint: epoch {state['epoch']}, 验证 DSC {state.get('dsc')}")
+    print(f"loaded checkpoint: epoch {state['epoch']}, validation DSC {state.get('dsc')}")
     return model, saved
 
 
@@ -59,7 +59,7 @@ def main():
     p.add_argument("--data-root", type=str, default=str(DEFAULT_ROOT))
     p.add_argument("--n-show", type=int, default=4)
     p.add_argument("--num-workers", type=int, default=-1,
-                   help="-1 表示按设备自动选择（CUDA 用 4，MPS/CPU 用 0）")
+                   help="-1 means choose automatically per device (4 on CUDA, 0 on MPS/CPU)")
     args = p.parse_args()
 
     device = pick_device()
@@ -67,7 +67,7 @@ def main():
     _, _, test_loader = get_dataloaders(args.data_root, 8,
                                         saved.get("image_size", 256), auto_workers(args.num_workers, device))
 
-    # 整个测试集的逐类 DSC
+    # per-class DSC over the whole test set
     inter = torch.zeros(NUM_CLASSES, device=device)
     card = torch.zeros(NUM_CLASSES, device=device)
     for x, y in test_loader:
@@ -77,13 +77,13 @@ def main():
         card += c
     dsc = dice_from_counts(inter, card).cpu()
 
-    print("\n--- 测试集 Dice 相似系数 ---")
+    print("\n--- Test set Dice similarity coefficient ---")
     for c, v in enumerate(dsc):
-        flag = "OK" if v > 0.9 else "低于 0.9"
+        flag = "OK" if v > 0.9 else "below 0.9"
         print(f"  class {c}: {v:.4f}  {flag}")
     print(f"  mean   : {dsc.mean():.4f}")
 
-    # 可视化若干样例：原图 / 真值 / 预测
+    # visualise a few examples: input image / ground truth / prediction
     x, y = next(iter(test_loader))
     pred = model(x.to(device)).argmax(1).cpu()
     n = min(args.n_show, x.size(0))
@@ -98,7 +98,7 @@ def main():
     fig.tight_layout()
     out = HERE / "outputs"; out.mkdir(exist_ok=True)
     fig.savefig(out / "segmentation_examples.png", dpi=120)
-    print("已保存分割样例:", out / "segmentation_examples.png")
+    print("saved segmentation examples:", out / "segmentation_examples.png")
 
 
 if __name__ == "__main__":

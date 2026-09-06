@@ -1,135 +1,161 @@
-# AI 使用记录 (AI Usage Log)
+# AI Usage Log
 
-课程评分标准要求：若使用 AI 工具，需说明用法与推理过程，并可能被要求提供
-prompt 历史（`prompt_history.pdf` 或等价材料）。本文件记录本仓库开发过程中
-AI 的实际参与方式、我对 AI 输出的**验证与修正**，以及最终由我承担的判断。
+The course marking criteria require that any use of AI tools be explained, including how it was
+used and the reasoning behind it, and a prompt history (`prompt_history.pdf` or equivalent) may
+be requested. This file records how AI was actually involved while developing this repository,
+the **verification and corrections** I applied to its output, and the judgements that remain
+mine.
 
-工具：**Claude Code (Opus 5)**，在本机终端与 Rangpur 集群上交互式使用。
-时间：2026-09-02。
-
----
-
-## 1. AI 的用法定位
-
-评分标准写明「把题目直接抄给 AI、再把答案抄回来」不算合格用法。本项目里 AI 的
-角色是**加速实现与排障**，而设计决策、结果解释、正确性验证由我把关。下面按
-「AI 产出 → 我发现的问题 → 修正」的顺序记录，这些修正本身就是理解的证据。
+Tool: **Claude Code (Opus 5)**, used interactively on this machine and on the Rangpur cluster.
+Date: 2026-09-02.
 
 ---
 
-## 2. AI 初版代码中被我发现并修正的问题
+## 1. Where AI Fits In
 
-### 2.1 Part 1 漏掉了任务书的核心要求
+The marking criteria state that pasting the task straight into an AI and pasting the answer back
+is not acceptable use. Here the AI's role was to **speed up implementation and debugging**, while
+design decisions, interpretation of results and correctness checks stayed with me. The record
+below follows the order "AI output → problem I found → fix"; those fixes are themselves the
+evidence of understanding.
 
-AI 最初写的 `dft.py` 只有 NumPy 版的朴素 DFT 与 `np.fft.fft` 对比。
-重读任务书第 5 页发现明确要求：
+---
+
+## 2. Problems I Found and Fixed in the AI's First-Draft Code
+
+### 2.1 Part 1 missed a core requirement of the task sheet
+
+The `dft.py` the AI first wrote only had a NumPy naive DFT compared against `np.fft.fft`.
+Re-reading page 5 of the task sheet, the requirement is explicit:
 
 > modify the 'square_wave', 'square_wave_fourier' and 'naive_dft' functions so that
 > they are implemented using TensorFlow (TF) or PyTorch operations. For 'naive_dft'
 > in particular, create a second version that explicitly runs on the GPU
 
-即必须有 **PyTorch 版**，且 `naive_dft` 要有**显式跑在 GPU 上**的版本。
-修正：补齐 `square_wave_torch` / `square_wave_fourier_torch` / `naive_dft_torch`，
-并加了规模扫描的计时基准。另外补了一个真正的双重循环版 `naive_dft_loops`，
-用来说明「同为 O(N²)，实现方式差 25 倍」——这一点任务书没要求，但它是理解
-「为什么最快的最快」的关键：**算法复杂度和常数因子是两件事**。
+So a **PyTorch version** is mandatory, and `naive_dft` needs a version that **explicitly runs on
+the GPU**. Fix: add `square_wave_torch` / `square_wave_fourier_torch` / `naive_dft_torch`, plus a
+timing benchmark that sweeps the problem size. I also added a genuine double-loop version,
+`naive_dft_loops`, to show that "the same O(N²) can differ by 25x depending on how it is
+written" — the task sheet does not ask for this, but it is the key to understanding *why* the
+fastest version is the fastest: **algorithmic complexity and the constant factor are two
+different things**.
 
-### 2.2 DSC 用了软 Dice，会让上报的分数失真
+### 2.2 The DSC used soft Dice, which distorts the reported score
 
-AI 写的 `dice_per_class` 直接对 softmax 概率算 Dice，训练损失和评测指标共用同一个
-函数。这是错的：任务书要求的 DSC 是对**硬预测**（argmax 之后的类别图）算的。
-软 Dice 在模型不自信时偏低、过分自信时偏高，拿它上报会失真。
+The AI's `dice_per_class` computed Dice straight from the softmax probabilities, with the
+training loss and the evaluation metric sharing one function. That is wrong: the DSC the task
+sheet asks for is computed on the **hard prediction (argmax)**, i.e. the class map after argmax.
+Soft Dice reads low when the model is under-confident and high when it is over-confident, so
+reporting it distorts the number.
 
-修正：拆成两个函数——`dice_per_class`（软，可导，只给损失用）与
-`hard_dice_counts`（硬，只给评测用）。
+Fix: split into two functions — `dice_per_class` (soft, differentiable, loss only) and
+`hard_dice_counts` (hard, evaluation only).
 
-### 2.3 DSC 的聚合方式也是错的
+### 2.3 The DSC aggregation was wrong as well
 
-原实现是「每个 batch 算一个 DSC，再除以 batch 数」。DSC 是比值，
-**batch 级 DSC 的平均 ≠ 数据集级 DSC**，而且最后一个不满的 batch 被赋予了同等权重。
+The original implementation computed one DSC per batch and divided by the number of batches.
+DSC is a ratio, so **the mean of per-batch DSCs is not the dataset-level DSC**, and the short
+final batch was given the same weight as a full one.
 
-修正：`hard_dice_counts` 返回逐类的交集与基数计数，跨 batch 累加完再做一次除法
-（见 `recognition/unet_oasis/modules.py` 的注释）。
+Fix: `hard_dice_counts` returns per-class intersection and cardinality counts; these accumulate
+across batches and the division happens once at the end (see the comments in
+`recognition/unet_oasis/modules.py`).
 
-### 2.4 slurm 脚本的参数是猜的，会导致作业永远排不上
+### 2.4 The slurm script's parameters were guesses that leave the job unscheduled forever
 
-AI 写的 `run_rangpur.slurm` 里 `--partition=a100`、`module load cuda`、`--mem=32G`
-都是按常见模板猜的。在集群上用 `sinfo` / `scontrol` / `sacctmgr` 逐条核对后发现三处错：
+In the AI's `run_rangpur.slurm`, `--partition=a100`, `module load cuda` and `--mem=32G` were all
+guessed from the usual templates. Checking each against the cluster with `sinfo` / `scontrol` /
+`sacctmgr` turned up three errors:
 
-| 猜测 | 实测 | 后果 |
+| Guess | Measured | Consequence |
 |---|---|---|
-| `--mem=32G` | 所有 a100 节点 `RealMemory=1` | **作业无限期 PENDING**，这是当时全课很多人卡住的真正原因 |
-| `--partition=comp3710` | 该分区 `AllowAccounts=comp3710`，账号关联未开通 | 一律 `PENDING (PartitionConfig)`；改用 `a100` 分区 |
-| `module load cuda` | 只有 cuda/11.1、11.4、12.2，而 conda 环境里是 torch 2.13.0+**cu130**（自带运行时） | 加载反而可能冲突，正确做法是不加载 |
+| `--mem=32G` | every a100 node reports `RealMemory=1` | **job PENDING indefinitely**; the real reason much of the class was stuck at the time |
+| `--partition=comp3710` | partition has `AllowAccounts=comp3710`, and the account association was never enabled | always `PENDING (PartitionConfig)`; switched to the `a100` partition |
+| `module load cuda` | only cuda/11.1, 11.4 and 12.2 exist, while the conda environment has torch 2.13.0+**cu130** (ships its own runtime) | loading it can actually conflict; the right move is not to load it |
 
-这一条说明 AI 对**具体集群的配置**是无知的，只能给模板；必须自己去核对。
+This one shows the AI knows nothing about **a specific cluster's configuration** and can only
+offer a template; you have to verify it against the machine yourself.
 
-### 2.5 多进程 DataLoader 在本机是负优化
+### 2.5 A multi-process DataLoader is a pessimisation on this machine
 
-AI 默认写了 `num_workers=4/8` + `persistent_workers=True`。在 Apple Silicon 上实测：
+The AI defaulted to `num_workers=4/8` plus `persistent_workers=True`. Measured on Apple Silicon:
 
-| 配置 | 耗时 |
+| Configuration | Time |
 |---|---|
 | `num_workers=0` | **9 ms/batch** |
 | `num_workers=6, persistent=True` | 262 ms/batch |
 | `num_workers=6, persistent=False` | 3249 ms/batch |
 
-单张 OASIS 切片解码只要约 1 ms，多进程的 IPC 序列化开销远大于收益，**慢 29 倍**；
-而且 fork 与 MPS 并存时还把主进程卡在过不可中断等待上。
-修正：加 `auto_workers()`，按设备选择（CUDA 用 4，MPS/CPU 用 0）。
+Decoding one OASIS slice takes about 1 ms, so the IPC serialisation cost of worker processes far
+outweighs the benefit — **29x slower**; and fork alongside MPS also left the main process wedged
+in an uninterruptible wait. Fix: add `auto_workers()`, which picks by device (4 on CUDA, 0 on
+MPS/CPU).
 
-### 2.6 标签解码为每张图分配了 H×W×4 的临时数组
+### 2.6 Label decoding allocated an H×W×4 temporary array per image
 
-原实现对每个像素与 4 个参考灰度值求距离再取 argmin。改成 256 项的查找表
-（`_LABEL_LUT`），一次索引完成映射。
-
----
-
-## 3. 我自己加的实验（AI 没有要求做）
-
-### 3.1 Part 2：给 57.76% 这个数字加上参照系
-
-AI 跑出随机森林 57.76% 就停了。这个数字单独看没有意义，我补了两组对照：
-
-- **多数类基线**：LFW 里 George W Bush 一人占测试集 41%，全猜他就有 41.3%。
-- **主成分个数消融**：25→0.6304、**50→0.6553**、100→0.5807、150→0.5776。
-  成分越多**反而越差**。解释：高阶 eigenface 主要编码光照与姿态噪声；随机森林
-  默认 `max_features='sqrt'`，150 维时每次分裂只抽约 12 个特征，抽到噪声的概率更高。
-- **类别加权**：`class_weight='balanced'` 把准确率从 0.5776 提到 0.7298，
-  macro-F1 从 0.3022 提到 0.6361 —— 混淆矩阵显示原模型几乎把所有样本都判给了多数类。
-
-### 3.2 Part 3.2：先测量再优化
-
-AI 给的 DAWNBench 方案用 torchvision 的 CPU DataLoader。在 A100 上实测
-**227 秒都跑不完一个 epoch**（97 步，>2.3 s/step），而 ResNet-18 在 A100 上的
-实际计算只要几十毫秒——瓶颈在数据管线，不在模型。
-
-原因：a100 节点每个只有 8 个 CPU 核，PIL 的 `RandomCrop → Flip → ToTensor → Normalize`
-喂不饱 GPU。
-
-我的做法：把整个 CIFAR-10（uint8 只有 153 MB）搬进 40 GB 显存，随机裁剪与翻转
-改用张量算子在 GPU 上做（`dataset.GPUCifar`）。结果 **1.9 秒/epoch**，
-30 轮共 **95 秒达到 94.15%**，比任务书的 V100 基准（360 秒）快近 4 倍。
-
-等价性我做了验证：reflect padding 到 40×40 后取 `[0,8]` 的逐样本随机偏移裁回
-32×32，当偏移恰为 (4,4) 时能**精确还原原图**——这确认了索引写法没有错位。
+The original implementation took the distance from every pixel to the 4 reference grey levels
+and then an argmin. Replaced by a 256-entry lookup table (`_LABEL_LUT`) that performs the mapping
+in a single indexing operation.
 
 ---
 
-## 4. 仍然由我判断、AI 无法代劳的部分
+## 3. Experiments I Added Myself (Not Asked For by the AI)
 
-- 任务书三档难度的取舍（Easy/Medium/Hard）与由此决定的分数上限
-- 数据划分沿用数据集自带的 train/validate/test（按病例分开），不重新切分 ——
-  相邻切片高度相关，随机切分会让同一病例的切片同时进训练集和测试集，造成泄漏
-- 标签 resize 必须用最近邻而非双线性，否则会插值出 `{0,85,170,255}` 之外的中间值
-- UNet 损失用 CE + Dice 各半的理由（背景占 72.29%，纯 CE 会偏向背景）
-- 上述所有实测数字的取得与解释
+### 3.1 Part 2: giving the 57.76% figure a frame of reference
+
+The AI stopped once the random forest reached 57.76%. On its own that number means nothing, so I
+added two sets of controls:
+
+- **Majority-class baseline**: in LFW, George W Bush alone accounts for 41% of the test set, so
+  always guessing him already scores 41.3%.
+- **Ablation on the number of principal components**: 25→0.6304, **50→0.6553**, 100→0.5807,
+  150→0.5776. More components make it **worse**, not better. Explanation: the higher-order
+  eigenfaces mostly encode lighting and pose noise; with the random forest's default
+  `max_features='sqrt'`, at 150 dimensions each split samples only about 12 features, so it is
+  more likely to draw noise.
+- **Class weighting**: `class_weight='balanced'` lifts accuracy from 0.5776 to 0.7298 and macro-F1
+  from 0.3022 to 0.6361 — the confusion matrix shows the original model assigned nearly every
+  sample to the majority class.
+
+### 3.2 Part 3.2: measure first, then optimise
+
+The DAWNBench plan the AI gave used torchvision's CPU DataLoader. Measured on an A100,
+**227 seconds was not even enough for one epoch** (97 steps, >2.3 s/step), while the actual
+compute for ResNet-18 on an A100 takes tens of milliseconds — the bottleneck is the data
+pipeline, not the model.
+
+Cause: each a100 node has only 8 CPU cores, and PIL's
+`RandomCrop → Flip → ToTensor → Normalize` cannot keep the GPU fed.
+
+What I did: make all of CIFAR-10 GPU-resident (153 MB as uint8) in the 40 GB of device memory,
+and perform the random crop and flip with tensor ops on the GPU (`dataset.GPUCifar`). Result:
+**1.9 s/epoch**, and **95 seconds to reach 94.15%** over 30 epochs — nearly 4x faster than the
+task sheet's V100 baseline (360 seconds).
+
+I verified the equivalence: after reflect padding to 40×40, a per-sample random offset in `[0,8]`
+crops back to 32×32, and when the offset is exactly (4,4) the original image is **reproduced
+exactly** — which confirms the indexing is not off by one.
 
 ---
 
-## 5. 可提供的证据
+## 4. Judgements That Stayed With Me and the AI Could Not Make
 
-- 本文件（开发过程与修正记录）
-- Git commit 历史（按 Part 分组，commit message 说明每次改动的理由）
-- 各 `outputs/` 目录下的结果图与 `logs/` 下的完整训练日志
-- 集群作业 ID：DAWNBench `581349`、UNet `581337`、VAE `581351`/`581352`
+- Choosing between the task sheet's three difficulty tiers (Easy/Medium/Hard) and the mark ceiling
+  that follows from it
+- Keeping the dataset's own train/validate/test split (separated by patient) rather than
+  re-splitting — adjacent slices are highly correlated, and a random split would put slices from
+  the same patient into both train and test, causing leakage
+- Label resizing must use nearest-neighbour rather than bilinear, otherwise interpolation invents
+  intermediate values outside `{0,85,170,255}`
+- The reason the UNet loss is half CE and half Dice (background is 72.29% of the pixels, so pure
+  CE biases towards it)
+- Obtaining and interpreting every measured number above
+
+---
+
+## 5. Evidence Available
+
+- This file (the development record and the log of corrections)
+- The git commit history (grouped by Part; each commit message states why the change was made)
+- The result figures under each `outputs/` directory and the full training logs under `logs/`
+- Cluster job IDs: DAWNBench `581349`, UNet `581337`, VAE `581351`/`581352`

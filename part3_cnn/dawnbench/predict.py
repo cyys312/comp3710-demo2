@@ -1,7 +1,7 @@
 """
-Part 3.2 DAWNBench —— 载入 checkpoint 做推理
+Part 3.2 DAWNBench — load a checkpoint and run inference
 
-运行: python predict.py --ckpt checkpoints/resnet18_cifar10.pth
+Run: python predict.py --ckpt checkpoints/resnet18_cifar10.pth
 """
 
 import argparse
@@ -15,7 +15,7 @@ from modules import ResNet18
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, falling back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -40,7 +40,7 @@ def main():
     state = torch.load(args.ckpt, map_location=device)
     model.load_state_dict(state["model"])
     model.eval()
-    print(f"载入 checkpoint: epoch {state['epoch']}, 训练时准确率 {state['acc'] * 100:.2f}%")
+    print(f"Loaded checkpoint: epoch {state['epoch']}, training acc {state['acc'] * 100:.2f}%")
 
     correct = total = 0
     per_class_correct = torch.zeros(len(classes))
@@ -56,7 +56,7 @@ def main():
                 per_class_total[c] += mask.sum().item()
                 per_class_correct[c] += (pred[mask] == c).sum().item()
 
-    print(f"测试集准确率: {correct / total * 100:.2f}%")
+    print(f"Test accuracy: {correct / total * 100:.2f}%")
     for c, name in enumerate(classes):
         print(f"  {name:12s} {per_class_correct[c] / per_class_total[c] * 100:5.1f}%")
 

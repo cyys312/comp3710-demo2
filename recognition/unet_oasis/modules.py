@@ -1,10 +1,12 @@
 """
-Task 2 UNet —— 模型与损失
+Task 2 UNet — model and losses
 
-UNet 的关键是 skip connection（跳跃连接）：把编码器每层的高分辨率特征
-拼接到对应的解码器层，弥补下采样丢掉的空间细节，这是分割精度的来源。
+The point of UNet is the skip connection: the high-resolution features of every encoder
+level are concatenated into the matching decoder level, restoring the spatial detail that
+downsampling threw away. That is where the segmentation accuracy comes from.
 
-输出为 C=4 通道的 logits，配合 one-hot 标签使用（任务书要求 categorical 输出）。
+Outputs C=4 channels of logits, used together with one-hot labels (the task sheet asks for
+categorical output).
 """
 
 import torch
@@ -13,7 +15,7 @@ import torch.nn.functional as F
 
 
 class DoubleConv(nn.Module):
-    """(3x3 卷积 + BN + ReLU) x 2 —— UNet 的基本单元。"""
+    """(3x3 conv + BN + ReLU) x 2 — the basic UNet building block."""
 
     def __init__(self, in_ch, out_ch):
         super().__init__()
@@ -66,10 +68,12 @@ class UNet(nn.Module):
 
 
 def dice_per_class(logits, target_one_hot, eps: float = 1e-6):
-    """**软** Dice：直接用 softmax 概率算，可导，专门给损失函数用。
+    """**Soft** Dice: computed straight from the softmax probabilities, differentiable, and
+    meant only for the loss.
 
-    注意不要拿它当评测指标上报 —— 评分要求的 DSC 是对**硬预测**（argmax 之后
-    的类别图）算的。软 Dice 在模型不自信时会偏低，在过分自信时又会偏高。
+    Do not report it as an evaluation metric — the DSC the marking asks for is computed on
+    **hard predictions** (the argmax class map). Soft Dice reads too low when the model is
+    unconfident and too high when it is overconfident.
     """
     probs = F.softmax(logits, dim=1)
     dims = (0, 2, 3)
@@ -80,12 +84,12 @@ def dice_per_class(logits, target_one_hot, eps: float = 1e-6):
 
 @torch.no_grad()
 def hard_dice_counts(logits, target_one_hot):
-    """返回逐类的 (交集, 基数) 计数，用于跨 batch 累加。
+    """Return per-class (intersection, cardinality) counts, to be accumulated across batches.
 
-    为什么要返回计数而不是直接返回 DSC：DSC 是个比值，
-    「先按 batch 算 DSC 再取平均」并不等于「整个数据集上的 DSC」，
-    而且最后一个不满的 batch 会被赋予同等权重。正确做法是把分子分母
-    分别累加完，最后再做一次除法。
+    Why counts rather than the DSC itself: DSC is a ratio, so "compute the DSC per batch and
+    average" is not the same as "the DSC over the whole dataset", and the short final batch
+    would carry the same weight as a full one. The correct approach is to accumulate the
+    numerator and denominator separately and divide once at the end.
     """
     num_classes = logits.shape[1]
     pred = F.one_hot(logits.argmax(dim=1), num_classes).permute(0, 3, 1, 2).float()
@@ -96,17 +100,17 @@ def hard_dice_counts(logits, target_one_hot):
 
 
 def dice_from_counts(intersection, cardinality, eps: float = 1e-6):
-    """把累加好的计数换算成逐类 DSC。"""
+    """Turn the accumulated counts into per-class DSC."""
     return (2.0 * intersection + eps) / (cardinality + eps)
 
 
 def dice_loss(logits, target_one_hot):
-    """1 - 平均 DSC。直接优化评测指标，比纯交叉熵更适合类别不平衡的分割。"""
+    """1 - mean DSC. Optimises the metric directly; suits class imbalance better than CE alone."""
     return 1.0 - dice_per_class(logits, target_one_hot).mean()
 
 
 class CombinedLoss(nn.Module):
-    """交叉熵 + Dice，兼顾像素级正确率与区域重叠度。"""
+    """Cross-entropy + Dice, covering both per-pixel correctness and region overlap."""
 
     def __init__(self, ce_weight: float = 0.5):
         super().__init__()

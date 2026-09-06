@@ -7,12 +7,13 @@
 #SBATCH --output=logs/gan-%j.out
 #SBATCH --error=logs/gan-%j.err
 
-# Task 3 —— OASIS 脑部 MRI 的 GAN 生成
-# 提交： sbatch slurm/gan.slurm
+# Task 3 — GAN generation of OASIS brain MRI
+# Submit: sbatch slurm/gan.slurm
 #
-# 任务书警告 GAN 收敛混乱且要求彻底解决 mode collapse，因此这里用了
-# R1 梯度惩罚 + 生成器 EMA + TTUR + label smoothing，
-# 并把「样本两两平均 L2 距离」作为多样性指标逐轮记录下来。
+# The task sheet warns that GAN convergence is erratic and demands that mode collapse be
+# solved outright, so this run uses an R1 gradient penalty + generator EMA + TTUR +
+# label smoothing, and records the mean pairwise L2 distance between samples as a
+# diversity score every epoch.
 
 cd "$SLURM_SUBMIT_DIR" || exit 1
 mkdir -p logs

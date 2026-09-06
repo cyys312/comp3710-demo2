@@ -1,14 +1,15 @@
 """
-Part 3.2 DAWNBench —— 训练 ResNet-18 / CIFAR-10
+Part 3.2 DAWNBench — training ResNet-18 / CIFAR-10
 
-目标：测试集准确率 > 90%，训练时间 < 30 分钟（A100 上用混合精度约几分钟即可到 94%）。
+Goal: test accuracy > 90% with training time < 30 minutes (on an A100 with mixed precision
+94% is reached in a few minutes).
 
-关键加速手段：
-  * AMP 混合精度 (torch.amp) —— 显著提速且省显存
-  * OneCycle 学习率 + SGD(nesterov) —— 少量 epoch 内快速收敛
-  * channels_last 内存格式 + cudnn.benchmark
+Key speed-ups:
+  * AMP mixed precision (torch.amp) — much faster and uses far less GPU memory
+  * OneCycle learning rate + SGD(nesterov) — converges within a handful of epochs
+  * channels_last memory format + cudnn.benchmark
 
-运行:
+Run:
   python train.py --epochs 30 --batch-size 512
 """
 
@@ -26,7 +27,7 @@ CKPT_DIR = Path(__file__).parent / "checkpoints"
 
 
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, and fall back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -38,20 +39,21 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--batch-size", type=int, default=512)
-    p.add_argument("--lr", type=float, default=0.4, help="OneCycle 的峰值学习率")
+    p.add_argument("--lr", type=float, default=0.4, help="peak learning rate for OneCycle")
     p.add_argument("--weight-decay", type=float, default=5e-4)
     p.add_argument("--label-smoothing", type=float, default=0.1)
     p.add_argument("--num-workers", type=int, default=8)
     p.add_argument("--data-root", type=str, default="./data")
-    p.add_argument("--no-amp", action="store_true", help="关闭混合精度")
+    p.add_argument("--no-amp", action="store_true", help="turn off mixed precision")
     p.add_argument("--loader", choices=["gpu", "cpu"], default="gpu",
-                   help="gpu=整个数据集常驻显存、增强在 GPU 上做（默认，快得多）；"
-                        "cpu=torchvision 的 DataLoader + PIL 增强（用于对照）")
+                   help="gpu=keep the whole dataset GPU-resident and augment on the GPU "
+                        "(default, much faster); cpu=torchvision DataLoader + PIL augmentation "
+                        "(for comparison)")
     p.add_argument("--log-every", type=int, default=20,
-                   help="每多少个 step 打印一次进度")
+                   help="print progress every this many steps")
     p.add_argument("--no-save", action="store_true",
-                   help="不写 checkpoint。演示时跑单个 epoch 要加这个，"
-                        "否则 1 轮的模型会覆盖掉已训练好的那个")
+                   help="do not write checkpoints. Pass this for a single-epoch demo run, "
+                        "otherwise the one-epoch model overwrites the fully trained one")
     return p.parse_args()
 
 
@@ -73,8 +75,9 @@ def main():
     torch.backends.cudnn.benchmark = True
     use_amp = (not args.no_amp) and device.type == "cuda"
 
-    # GPU 常驻管线 vs CPU DataLoader —— 见 dataset.GPUCifar 的说明。
-    # a100 节点只有 8 个 CPU 核，PIL 增强会成为瓶颈，默认走 GPU 版。
+    # GPU-resident pipeline vs CPU DataLoader — see the notes in dataset.GPUCifar.
+    # The a100 node has only 8 CPU cores, so PIL augmentation becomes the bottleneck;
+    # the GPU path is therefore the default.
     if args.loader == "gpu":
         train_loader, test_loader, _ = get_gpu_loaders(args.data_root, args.batch_size, device)
     else:
@@ -114,8 +117,8 @@ def main():
             scaler.update()
             scheduler.step()
             running += loss.item()
-            # 第一个 epoch 打分步进度，用来判断数据管线有没有成为瓶颈；
-            # 之后只打 epoch 汇总，免得日志太吵。
+            # Per-step progress in the first epoch shows whether the data pipeline is the
+            # bottleneck; later epochs print only the summary to keep the log readable.
             if epoch == 1 and (step % args.log_every == 0 or step == n_steps):
                 per_step = (time.perf_counter() - epoch_start) / step
                 print(f"  epoch 1 [{step:3d}/{n_steps}] loss {running / step:.4f} "
@@ -125,8 +128,8 @@ def main():
         acc = evaluate(model, test_loader, device)
         elapsed = time.perf_counter() - t0
         print(f"epoch {epoch:3d} | loss {running / n_steps:.4f} "
-              f"| test acc {acc * 100:.2f}% | 本轮 {train_time:.1f}s "
-              f"| 累计 {elapsed:.0f}s", flush=True)
+              f"| test acc {acc * 100:.2f}% | this epoch {train_time:.1f}s "
+              f"| cumulative {elapsed:.0f}s", flush=True)
 
         if acc > best_acc:
             best_acc = acc
@@ -135,20 +138,20 @@ def main():
                            CKPT_DIR / "resnet18_cifar10.pth")
 
     total_s = time.perf_counter() - t0
-    print(f"\n最佳准确率 {best_acc * 100:.2f}%，总用时 {total_s:.0f} 秒 "
-          f"({total_s / 60:.1f} 分钟)")
+    print(f"\nBest accuracy {best_acc * 100:.2f}%, total time {total_s:.0f} s "
+          f"({total_s / 60:.1f} min)")
 
-    # 只在完整训练时对照任务书的三档要求。
-    # 演示时会用 --epochs 1 单跑一轮来证明训练管线可用，那种情况下
-    # 打「未达标」会让人误以为整个任务没达标，所以改为明确说明这是管线自检。
+    # Only check against the task sheet's tiers after a full training run.
+    # The demo uses --epochs 1 to show the training pipeline works; printing "not met" there
+    # would suggest the whole task failed, so that case says plainly it is a pipeline check.
     if args.epochs < 10:
-        print(f"（这是 {args.epochs} 个 epoch 的管线自检，不是完整训练；"
-              f"完整 30 轮的结果是 94.15% / 95 秒，见 README）")
+        print(f"(This is a {args.epochs}-epoch pipeline check, not a full training run; "
+              f"the full 30-epoch result is 94.15% / 95 s, see README)")
     else:
-        print(f"  [1分] >90% 且 <30 分钟          : "
-              f"{'达标' if best_acc > 0.90 and total_s < 1800 else '未达标'}")
-        print(f"  [2分] >=94% 且 <=360 秒(V100 基准): "
-              f"{'达标' if best_acc >= 0.94 and total_s <= 360 else '未达标'}")
+        print(f"  [1 mark]  >90% and <30 min                 : "
+              f"{'met' if best_acc > 0.90 and total_s < 1800 else 'not met'}")
+        print(f"  [2 marks] >=94% and <=360 s (V100 baseline): "
+              f"{'met' if best_acc >= 0.94 and total_s <= 360 else 'not met'}")
 
 
 if __name__ == "__main__":

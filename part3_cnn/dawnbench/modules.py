@@ -1,10 +1,10 @@
 """
-Part 3.2 DAWNBench —— 模型定义（ResNet-18，为 CIFAR-10 32x32 输入改造）
+Part 3.2 DAWNBench — model definition (ResNet-18, adapted for 32x32 CIFAR-10 input)
 
-与 torchvision 的 ImageNet 版 ResNet-18 的差别：
-  * 首层用 3x3 stride=1 卷积代替 7x7 stride=2，且去掉 maxpool
-    —— 32x32 的输入经不起一开始就 4 倍下采样。
-不使用任何预训练权重（任务书要求）。
+Differences from torchvision's ImageNet ResNet-18:
+  * The stem is a 3x3 stride=1 convolution instead of 7x7 stride=2, and the maxpool is dropped
+    — a 32x32 input cannot afford 4x downsampling before anything has been learnt.
+No pretrained weights are used anywhere (required by the task sheet).
 """
 
 import torch
@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 
 class BasicBlock(nn.Module):
-    """ResNet 基本残差块：两层 3x3 卷积 + 恒等/投影捷径。"""
+    """Basic ResNet residual block: two 3x3 convolutions plus an identity/projection shortcut."""
 
     expansion = 1
 
@@ -24,7 +24,7 @@ class BasicBlock(nn.Module):
         self.conv2 = nn.Conv2d(planes, planes, 3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
-        # 尺寸或通道数变化时，捷径需要 1x1 卷积做投影
+        # The shortcut needs a 1x1 projection whenever the spatial size or the channel count changes
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != planes * self.expansion:
             self.shortcut = nn.Sequential(
@@ -35,7 +35,7 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
-        out = out + self.shortcut(x)      # 残差相加
+        out = out + self.shortcut(x)      # residual addition
         return F.relu(out)
 
 

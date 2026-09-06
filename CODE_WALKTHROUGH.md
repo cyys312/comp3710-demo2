@@ -35,8 +35,10 @@
 ### `pick_device()` — 一份代码两个环境
 
 ```python
+
+
 def pick_device() -> torch.device:
-    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    """Prefer CUDA (Rangpur A100), then Apple MPS, and fall back to CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -68,8 +70,10 @@ def auto_workers(requested: int, device: torch.device) -> int:
 ### `sync()` — GPU 计时的坑（Part 1 用）
 
 ```python
+
+
 def sync(device: torch.device) -> None:
-    """GPU 上的算子是异步下发的，计时前必须同步，否则测到的只是下发时间。"""
+    """GPU kernels launch asynchronously; without this sync you time the launch, not the work."""
     if device.type == "cuda":
         torch.cuda.synchronize()
     elif device.type == "mps":
@@ -92,11 +96,16 @@ def sync(device: torch.device) -> None:
 **① 教科书式双重循环** — 严格 O(N²)，只为了对照
 
 ```python
-def naive_dft_loops(x):
+def naive_dft_loops(x: np.ndarray) -> np.ndarray:
+    """Textbook naive DFT: two nested Python loops, strictly O(N^2).
+
+    Only run for very small N; it exists to show that two implementations of the same O(N^2)
+    algorithm can still differ by a factor of several hundred.
+    """
     n_samples = len(x)
     out = np.zeros(n_samples, dtype=np.complex128)
-    for k in range(n_samples):          # 每个频率 bin
-        for n in range(n_samples):      # 累加所有采样点的贡献
+    for k in range(n_samples):
+        for n in range(n_samples):
             out[k] += x[n] * np.exp(-2j * np.pi * k * n / n_samples)
     return out
 ```
@@ -125,7 +134,7 @@ def naive_dft_torch(x):
     n_samples = x.shape[-1]
     idx = torch.arange(n_samples, device=x.device, dtype=torch.float32)
     angle = -2.0 * torch.pi * idx[:, None] * idx[None, :] / n_samples
-    # 用 cos/sin 组装复数矩阵，避免依赖后端的复数指数算子
+    # Build the complex matrix from cos/sin to avoid depending on a backend complex exp
     w = torch.complex(torch.cos(angle), torch.sin(angle))
     return w @ x.to(torch.complex64)
 ```
@@ -143,14 +152,14 @@ def naive_dft_torch(x):
 ### 计时函数里的两个细节
 
 ```python
-def _time_it(fn, repeats, device=None):
-    """跑 repeats 次取最小值（最小值比均值更抗系统噪声）。"""
+def _time_it(fn, repeats: int, device: torch.device | None = None) -> float:
+    """Run repeats times and keep the minimum (more robust to system noise than the mean)."""
     best = float("inf")
     for _ in range(repeats):
         start = time.perf_counter()
         fn()
         if device is not None:
-            sync(device)                    # 关键：等 GPU 真正算完
+            sync(device)
         best = min(best, time.perf_counter() - start)
     return best
 ```
@@ -176,14 +185,19 @@ LFW 人脸 → 去均值 → SVD 得 eigenfaces → 投影到 face space → 随
 
 ```python
 def compute_pca(X_train, X_test, n_components=N_COMPONENTS):
-    mean = np.mean(X_train, axis=0)     # 均值只用训练集算
+    """Mean-centre the training set, run SVD, return the components and the projections.
+
+    The mean must come from the training set alone and then be subtracted from both splits;
+    computing it over all the data leaks test information into the model.
+    """
+    mean = np.mean(X_train, axis=0)
     X_train = X_train - mean
-    X_test = X_test - mean              # 但同一个均值也减到测试集上
+    X_test = X_test - mean
 
     U, S, Vt = np.linalg.svd(X_train, full_matrices=False)
-    components = Vt[:n_components]      # 前 k 个右奇异向量 = 主成分
+    components = Vt[:n_components]
 
-    X_train_pca = X_train @ components.T    # 投影到 face space
+    X_train_pca = X_train @ components.T
     X_test_pca = X_test @ components.T
     return components, S, X_train_pca, X_test_pca, mean
 ```
@@ -209,13 +223,13 @@ eigenfaces = components.reshape((N_COMPONENTS, h, w))
 
 ```python
 def ablation(X_train_pca, X_test_pca, y_train, y_test):
-    # 实验 1：主成分个数
+    # Experiment 1: number of principal components
     for k in (25, 50, 100, 150):
         clf = RandomForestClassifier(n_estimators=150, random_state=RANDOM_STATE, n_jobs=-1)
         clf.fit(X_train_pca[:, :k], y_train)
         acc_k = (clf.predict(X_test_pca[:, :k]) == y_test).mean()
 
-    # 实验 2：类别加权
+    # Experiment 2: class weighting
     for weight in (None, "balanced"):
         clf = RandomForestClassifier(..., class_weight=weight)
 ```
@@ -232,12 +246,12 @@ def ablation(X_train_pca, X_test_pca, y_train, y_test):
 ```python
 class SimpleCNN(nn.Module):
     def __init__(self, n_classes, in_shape):
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)   # 任务书要求
-        self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)  # 两层 3x3 / 32 filters
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)   # required by the task sheet
+        self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)  # two 3x3 layers, 32 filters each
         self.pool = nn.MaxPool2d(2)
         self.dropout = nn.Dropout(0.5)
 
-        # 用一次假前向推出展平后的维度，避免手算
+        # A dummy forward pass recovers the flattened dimension, so it never has to be hand-derived
         with torch.no_grad():
             dummy = torch.zeros(1, 1, *in_shape)
             flat_dim = self._features(dummy).flatten(1).shape[1]
@@ -280,7 +294,7 @@ class SimpleCNN(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         self.in_planes = 64
-        # 与 ImageNet 版的唯一差别就在下面这一行 + 没有 maxpool
+        # the only differences from the ImageNet version: this line, and no maxpool
         self.conv1 = nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False)
 ```
 
@@ -301,12 +315,14 @@ class ResNet(nn.Module):
 残差块的捷径：
 
 ```python
-self.shortcut = nn.Sequential()          # 默认是恒等映射
-if stride != 1 or in_planes != planes * self.expansion:
-    self.shortcut = nn.Sequential(       # 尺寸或通道变了才用 1x1 卷积投影
-        nn.Conv2d(in_planes, planes * self.expansion, 1, stride=stride, bias=False),
-        nn.BatchNorm2d(planes * self.expansion),
-    )
+
+        # The shortcut needs a 1x1 projection whenever the spatial size or the channel count changes
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != planes * self.expansion:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, planes * self.expansion, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * self.expansion),
+            )
 ```
 
 **空的 `nn.Sequential()` 就是恒等映射**——只有当 stride 或通道数变化、
@@ -321,10 +337,10 @@ if stride != 1 or in_planes != planes * self.expansion:
 **核心思路**：CIFAR-10 全部像素只有 153 MB（uint8），一次性搬进 40 GB 显存。
 
 ```python
-# (N,32,32,3) uint8 -> (N,3,32,32) uint8，一次性搬进显存
+# (N,32,32,3) uint8 -> (N,3,32,32) uint8, moved into GPU memory in one go
 images = torch.from_numpy(ds.data).permute(0, 3, 1, 2).contiguous()
 self.images = images.to(device, non_blocking=True)
-# ToTensor 会把像素除以 255，这里省掉这一步，直接把 MEAN/STD 乘回 255
+# ToTensor divides pixels by 255; we skip that and scale MEAN/STD up by 255 instead
 self.mean = torch.tensor(MEAN, device=device).view(1, 3, 1, 1) * 255.0
 ```
 
@@ -332,14 +348,16 @@ self.mean = torch.tensor(MEAN, device=device).view(1, 3, 1, 1) * 255.0
 
 ```python
 def _random_crop(self, x):
+    """Per-sample reflect-padded random crop, equivalent to T.RandomCrop(32, padding=4)."""
     n = x.shape[0]
+    dev = x.device
     padded = F.pad(x, (4, 4, 4, 4), mode="reflect")          # (N,3,40,40)
-    offset_y = torch.randint(0, 9, (n,), device=dev)         # 每个样本独立的偏移
+    offset_y = torch.randint(0, 9, (n,), device=dev)
     offset_x = torch.randint(0, 9, (n,), device=dev)
     rows = offset_y.view(n, 1, 1) + torch.arange(32, device=dev).view(1, 32, 1)
     cols = offset_x.view(n, 1, 1) + torch.arange(32, device=dev).view(1, 1, 32)
     batch_idx = torch.arange(n, device=dev).view(n, 1, 1)
-    # 混用高级索引与切片时，高级索引的维度会排到最前面 -> (N,32,32,3)
+    # Mixing advanced indexing with a slice moves the advanced dims to the front -> (N,32,32,3)
     cropped = padded[batch_idx, :, rows, cols]
     return cropped.permute(0, 3, 1, 2).contiguous()
 ```
@@ -377,15 +395,15 @@ scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 ...
 with torch.amp.autocast("cuda", enabled=use_amp):
     loss = criterion(model(x), y)
-scaler.scale(loss).backward()     # 损失放大，避免 fp16 梯度下溢
-scaler.step(optimiser)            # 内部先把梯度缩回去，遇到 inf/nan 就跳过这步
-scaler.update()                   # 动态调整缩放因子
+scaler.scale(loss).backward()     # scale up the loss to stop fp16 gradients underflowing
+scaler.step(optimiser)            # unscales first; skips the step entirely on inf/nan
+scaler.update()                   # adapt the scale factor
 ```
 
 ```python
 if acc > best_acc:
     best_acc = acc
-    if not args.no_save:          # 演示跑单个 epoch 时不写 checkpoint
+    if not args.no_save:          # skip writing a checkpoint on a single-epoch demo run
         torch.save(...)
 ```
 
@@ -411,11 +429,12 @@ if acc > best_acc:
 ### 重参数化技巧 — 一定会被问
 
 ```python
-@staticmethod
-def reparameterise(mu, logvar):
-    """重参数化技巧：z = mu + sigma * eps，让采样这一步可导。"""
-    std = torch.exp(0.5 * logvar)
-    return mu + std * torch.randn_like(std)
+
+    @staticmethod
+    def reparameterise(mu, logvar):
+        """Reparameterisation trick: z = mu + sigma * eps, which keeps sampling differentiable."""
+        std = torch.exp(0.5 * logvar)
+        return mu + std * torch.randn_like(std)
 ```
 
 **为什么网络输出 `logvar` 而不是 `sigma`**：方差必须为正。
@@ -428,8 +447,8 @@ z 对 mu 和 std 是确定性的可导函数，梯度能正常回传到编码器
 ### 损失函数
 
 ```python
-def vae_loss(recon, x, mu, logvar, beta=1.0):
-    """ELBO 的负值：重建项 (BCE) + beta * KL 项。"""
+def vae_loss(recon, x, mu, logvar, beta: float = 1.0):
+    """Negative ELBO: reconstruction term (BCE) + beta * KL term. Returns (total, recon, KL)."""
     recon_loss = F.binary_cross_entropy(recon, x, reduction="sum") / x.size(0)
     kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / x.size(0)
     return recon_loss + beta * kl, recon_loss, kl
@@ -445,8 +464,13 @@ def vae_loss(recon, x, mu, logvar, beta=1.0):
 
 ```python
 def normal_ppf(q):
-    """标准正态的分位数函数。等价于 scipy.stats.norm.ppf，但不依赖 scipy——
-    集群 conda 环境里没装。ppf(q) = sqrt(2) * erfinv(2q - 1)。"""
+    """Quantile function (probit) of the standard normal distribution.
+
+    Equivalent to scipy.stats.norm.ppf but written with numpy alone — the cluster's conda
+    environment has no scipy, and dragging in a whole dependency for one function is not worth it.
+    ppf(q) = sqrt(2) * erfinv(2q - 1); numpy has no erfinv, so this borrows torch's
+    (a few dozen points on CPU, negligible cost).
+    """
     q = torch.as_tensor(np.asarray(q, dtype=np.float64))
     return (torch.sqrt(torch.tensor(2.0, dtype=torch.float64)) *
             torch.erfinv(2 * q - 1)).numpy()
@@ -455,16 +479,26 @@ def normal_ppf(q):
 实测与 scipy 的最大偏差 **8.882e-16**（双精度的噪声水平）。
 
 ```python
-grid_x = normal_ppf(np.linspace(0.02, 0.98, n))     # 按分位数取，不是等距
+    # Space the grid by quantile rather than uniformly: the prior is standard normal, so equal
+    # quantile steps cover the probability mass evenly and the edges are not untrained territory.
+    grid_x = normal_ppf(np.linspace(0.02, 0.98, n))
 ```
 
 **为什么用分位数**：先验是标准正态。等距取点会让网格边缘落在概率密度极低的区域，
 那里模型训练时几乎没见过，解出来的图不可信。分位数采样让网格**均匀覆盖概率质量**。
 
 ```python
-def pca_2d(latents):
-    """UMAP 的兜底：集群没装 umap-learn，PCA 用 torch 的 SVD 就能做。"""
+def pca_2d(latents: torch.Tensor):
+    """Reduce the latent vectors to 2D (PCA); returns (projection, variance ratio of each PC).
+
+    A fallback for UMAP: the cluster's conda environment has no umap-learn, whereas PCA needs
+    only torch's SVD and pulls in no extra dependency.
+    For the question of whether the latent space has continuous structure, a linear projection
+    already settles it; UMAP's advantage is preserving non-linear neighbourhood structure, which
+    is nicer to have but does not change the conclusion.
+    """
     centred = latents - latents.mean(dim=0, keepdim=True)
+    # full_matrices=False computes only the singular vectors we need
     u, s, _ = torch.linalg.svd(centred, full_matrices=False)
     projected = u[:, :2] * s[:2]
     ratio = (s ** 2 / (s ** 2).sum())[:2]
@@ -524,13 +558,19 @@ def forward(self, x):
 **修正 1：软 Dice 只能当损失，不能当指标**
 
 ```python
-def dice_per_class(logits, target_one_hot, eps=1e-6):
-    """**软** Dice：直接用 softmax 概率算，可导，专门给损失函数用。
+def dice_per_class(logits, target_one_hot, eps: float = 1e-6):
+    """**Soft** Dice: computed straight from the softmax probabilities, differentiable, and
+    meant only for the loss.
 
-    注意不要拿它当评测指标上报 —— 评分要求的 DSC 是对**硬预测**（argmax 之后
-    的类别图）算的。软 Dice 在模型不自信时会偏低，在过分自信时又会偏高。
+    Do not report it as an evaluation metric — the DSC the marking asks for is computed on
+    **hard predictions** (the argmax class map). Soft Dice reads too low when the model is
+    unconfident and too high when it is overconfident.
     """
     probs = F.softmax(logits, dim=1)
+    dims = (0, 2, 3)
+    intersection = torch.sum(probs * target_one_hot, dims)
+    cardinality = torch.sum(probs + target_one_hot, dims)
+    return (2.0 * intersection + eps) / (cardinality + eps)
 ```
 
 **修正 2：DSC 是比值，不能按 batch 平均**
@@ -538,12 +578,12 @@ def dice_per_class(logits, target_one_hot, eps=1e-6):
 ```python
 @torch.no_grad()
 def hard_dice_counts(logits, target_one_hot):
-    """返回逐类的 (交集, 基数) 计数，用于跨 batch 累加。
+    """Return per-class (intersection, cardinality) counts, to be accumulated across batches.
 
-    为什么要返回计数而不是直接返回 DSC：DSC 是个比值，
-    「先按 batch 算 DSC 再取平均」并不等于「整个数据集上的 DSC」，
-    而且最后一个不满的 batch 会被赋予同等权重。正确做法是把分子分母
-    分别累加完，最后再做一次除法。
+    Why counts rather than the DSC itself: DSC is a ratio, so "compute the DSC per batch and
+    average" is not the same as "the DSC over the whole dataset", and the short final batch
+    would carry the same weight as a full one. The correct approach is to accumulate the
+    numerator and denominator separately and divide once at the end.
     """
     num_classes = logits.shape[1]
     pred = F.one_hot(logits.argmax(dim=1), num_classes).permute(0, 3, 1, 2).float()
@@ -560,9 +600,9 @@ inter = torch.zeros(NUM_CLASSES, device=device)
 card = torch.zeros(NUM_CLASSES, device=device)
 for x, y in loader:
     i, c = hard_dice_counts(model(x), to_one_hot(y, NUM_CLASSES))
-    inter += i          # 分子分母分别累加
+    inter += i          # accumulate numerator and denominator separately
     card += c
-return dice_from_counts(inter, card)    # 全部累完再除一次
+return dice_from_counts(inter, card)    # one division only, after everything is accumulated
 ```
 
 数学上：`2ΣI / ΣC ≠ (1/n)·Σ(2Iᵢ/Cᵢ)`。
@@ -591,7 +631,7 @@ class CombinedLoss(nn.Module):
 LABEL_VALUES = np.array([0, 85, 170, 255], dtype=np.int16)
 ...
 img = self._load(self.img_paths[idx]).astype(np.float32) / 255.0
-seg = self._load(self.seg_paths[idx], nearest=True)   # 标签必须最近邻，不能插值
+seg = self._load(self.seg_paths[idx], nearest=True)   # nearest-neighbour, never interpolate
 ```
 
 ```python
@@ -613,7 +653,7 @@ seg_lookup = {p.name.replace("seg_", "", 1): p for p in self.seg_dir.glob("*.png
 for p in self.img_paths:
     key = p.name.replace("case_", "", 1)
     if key not in seg_lookup:
-        raise KeyError(f"{p.name} 找不到对应标签")
+        raise KeyError(f"{p.name} has no matching label")
 ```
 
 `case_441_slice_0.nii.png` 去掉前缀是 `441_slice_0.nii.png`，
@@ -643,7 +683,13 @@ for p in self.img_paths:
 
 ```python
 def r1_penalty(discriminator, real_images):
-    """R1 梯度惩罚：判别器在**真实样本**处梯度的平方范数。"""
+    """R1 gradient penalty: squared gradient norm of the discriminator at **real samples**.
+
+    Intuition: flattening the discriminator near the real data manifold stops it from getting
+    too sharp; once the discriminator is too strong the generator receives vanishing
+    gradients and training collapses immediately.
+    Unlike WGAN-GP, R1 needs no interpolation between real and fake samples, so it costs less.
+    """
     real_images = real_images.detach().requires_grad_(True)
     logits = discriminator(real_images)
     grad = torch.autograd.grad(
@@ -684,7 +730,7 @@ class EMA:
     def update(self, model):
         for shadow_p, p in zip(self.shadow.parameters(), model.parameters()):
             shadow_p.lerp_(p.detach(), 1.0 - self.decay)
-        # buffer（BatchNorm 的 running stats）直接拷贝，不做平均
+        # buffers (BatchNorm running stats) are copied straight over, not averaged
         for shadow_b, b in zip(self.shadow.buffers(), model.buffers()):
             shadow_b.copy_(b)
 ```
@@ -698,13 +744,19 @@ class EMA:
 
 ```python
 @torch.no_grad()
-def diversity_score(images, max_pairs=2048):
-    """样本两两之间的平均 L2 距离 —— 用来量化 mode collapse。"""
+def diversity_score(images: torch.Tensor, max_pairs: int = 2048) -> float:
+    """Mean pairwise L2 distance between samples — the diversity score for mode collapse.
+
+    This is the objective evidence this project uses to decide whether mode collapse
+    happened: if the generator collapses onto a few modes the samples are nearly identical
+    to one another, and this number falls far below the same measure on real data.
+    Judging generated images by eye is subjective; this number is evidence you can show.
+    """
     flat = images.flatten(1)
     n = flat.size(0)
     idx_a = torch.randint(0, n, (max_pairs,), device=flat.device)
     idx_b = torch.randint(0, n, (max_pairs,), device=flat.device)
-    keep = idx_a != idx_b                       # 排除自己和自己配对
+    keep = idx_a != idx_b                       # drop pairs of a sample with itself
     return (flat[idx_a[keep]] - flat[idx_b[keep]]).norm(dim=1).mean().item()
 ```
 
@@ -717,7 +769,7 @@ def diversity_score(images, max_pairs=2048):
 ### 训练循环里的两处关键
 
 ```python
-fake = gen(z).detach()          # detach：这一步不更新生成器
+fake = gen(z).detach()          # detach: no generator update in this step
 loss_d = (bce(logits_real, torch.full_like(logits_real, args.label_smooth))
           + bce(logits_fake, torch.zeros_like(logits_fake)))
 ```
@@ -726,8 +778,10 @@ loss_d = (bce(logits_real, torch.full_like(logits_real, args.label_smooth))
 忘了这个的话生成器会朝「帮判别器分辨」的方向更新，训练立刻毁掉。
 
 ```python
-fake = gen(z)                   # 这次不 detach
-loss_g = bce(disc(fake), torch.ones(batch, device=device))
+            fake = gen(z)
+            # Non-saturating loss: maximise log D(G(z)), not minimise log(1 - D(G(z))), whose
+            # gradient nearly vanishes early on while D is strong, as the original GAN paper noted.
+            loss_g = bce(disc(fake), torch.ones(batch, device=device))
 ```
 
 **非饱和损失**：给假样本打上「真」的标签去算 BCE，等价于最大化 `log D(G(z))`。
