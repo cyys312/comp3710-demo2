@@ -1,11 +1,12 @@
-# 数据集（体积大，不入库）
+# Datasets (large, never committed)
 data/
 *.zip
 *.tar.gz
 keras_png_slices_data/
 
-# 训练产物：权重文件太大不入库，但结果图要入库 —— 它们是 demo 的证据，
-# 也是 README 里结果表格的出处（全部加起来不到 1 MB）。
+# Training artefacts: weights are too large to commit, but the result figures are kept —
+# they are the evidence shown at the demo and the source of the tables in the READMEs
+# (well under 1 MB in total).
 checkpoints/
 runs/
 *.pth
@@ -22,21 +23,21 @@ venv/
 env/
 *.egg-info/
 
-# 编辑器与系统
+# Editors and OS
 .vscode/
 .idea/
 .DS_Store
 
-# SLURM 与本地训练日志
+# SLURM and local training logs
 logs/
 slurm-*.out
 *.out
 *.err
 
-# 临时目录（可手动删除）
+# Scratch directory (safe to delete by hand)
 _to_delete/
 
-# 进度存档（个人用，不入库）
+# Personal progress notes, not part of the submission
 STATE.md
 commit_and_push.sh
 .gitlocks/
