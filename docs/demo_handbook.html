@@ -1,0 +1,1189 @@
+<title>COMP3710 Demo 应答手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  :root{
+    --paper:#F6F8FA;
+    --card:#FFFFFF;
+    --ink:#141A22;
+    --slate:#56626F;
+    --faint:#7C8794;
+    --line:#DCE2E8;
+    --line-soft:#E9EDF1;
+    --accent:#0E6E78;
+    --accent-soft:#E2F1F2;
+    --signal:#9A5B0B;
+    --signal-soft:#FBF0DF;
+    --code-bg:#EDF1F4;
+    --shadow:0 1px 2px rgba(20,26,34,.05), 0 8px 24px -16px rgba(20,26,34,.28);
+    /* 语法高亮 —— 亮色 */
+    --hl-kw:#9A3E9A;
+    --hl-str:#0A6640;
+    --hl-num:#9A5B0B;
+    --hl-com:#7C8794;
+    --hl-fn:#0E6E78;
+    --hl-builtin:#1F4E9C;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0D1117; --card:#141A21; --ink:#E4EAF0; --slate:#9CA9B7;
+      --faint:#7A8794; --line:#252E38; --line-soft:#1D252E;
+      --accent:#4FB8C2; --accent-soft:#123034;
+      --signal:#D8A257; --signal-soft:#2E2415; --code-bg:#1B222B;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+      --hl-kw:#D695D6; --hl-str:#6FC59B; --hl-num:#E0AC6A;
+      --hl-com:#7A8794; --hl-fn:#5FC7D1; --hl-builtin:#7FAEE8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0D1117; --card:#141A21; --ink:#E4EAF0; --slate:#9CA9B7;
+    --faint:#7A8794; --line:#252E38; --line-soft:#1D252E;
+    --accent:#4FB8C2; --accent-soft:#123034;
+    --signal:#D8A257; --signal-soft:#2E2415; --code-bg:#1B222B;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    --hl-kw:#D695D6; --hl-str:#6FC59B; --hl-num:#E0AC6A;
+    --hl-com:#7A8794; --hl-fn:#5FC7D1; --hl-builtin:#7FAEE8;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  }
+  code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .shell{max-width:1240px;margin:0 auto;padding:0 20px 96px}
+  .masthead{
+    padding:40px 0 28px;border-bottom:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;justify-content:space-between;
+  }
+  .mast-id{display:flex;flex-direction:column;gap:6px}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  h1{margin:0;font-size:clamp(28px,4.2vw,40px);line-height:1.15;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+  .mast-sub{margin:2px 0 0;color:var(--slate);font-size:15px;max-width:56ch}
+
+  .rubric{display:flex;flex-direction:column;gap:8px;min-width:280px}
+  .rubric-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .bar{display:flex;height:34px;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .bar span{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
+    font-family:"IBM Plex Mono",monospace;color:var(--card)}
+  .seg-code{background:var(--faint);flex:0 0 20%}
+  .seg-qa{background:var(--accent);flex:0 0 40%}
+  .seg-craft{background:color-mix(in srgb,var(--accent) 62%,var(--slate));flex:0 0 20%}
+  .seg-tell{background:color-mix(in srgb,var(--accent) 34%,var(--slate));flex:0 0 20%}
+  .rubric-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--slate)}
+  .rubric-key b{color:var(--ink);font-weight:600}
+
+  .body-grid{display:grid;grid-template-columns:212px minmax(0,1fr);gap:44px;margin-top:36px;align-items:start}
+  @media (max-width:980px){.body-grid{grid-template-columns:1fr;gap:0}}
+
+  nav.rail{position:sticky;top:20px;display:flex;flex-direction:column;gap:1px;max-height:calc(100vh - 40px);overflow-y:auto}
+  .rail-group{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+    font-weight:700;padding:14px 10px 5px}
+  .rail-group:first-child{padding-top:0}
+  @media (max-width:980px){
+    nav.rail{position:sticky;top:0;z-index:20;flex-direction:row;overflow-x:auto;max-height:none;
+      background:var(--paper);border-bottom:1px solid var(--line);
+      padding:10px 20px;margin:0 -20px 20px;gap:6px}
+    nav.rail a{white-space:nowrap}
+    .rail-group{display:none}
+  }
+  nav.rail a{color:var(--slate);text-decoration:none;font-size:13.5px;padding:5px 10px;border-radius:5px;
+    border-left:2px solid transparent;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  nav.rail a:hover{color:var(--ink);background:var(--line-soft)}
+  nav.rail a.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:600}
+  @media (max-width:980px){nav.rail a{border-left:none;border-bottom:2px solid transparent}
+    nav.rail a.on{border-left-color:transparent;border-bottom-color:var(--accent)}}
+  nav.rail .mk{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+  @media (max-width:980px){nav.rail .mk{display:none}}
+
+  main{min-width:0;max-width:70ch}
+
+  section{padding-top:14px;margin-bottom:52px;scroll-margin-top:24px}
+  @media (max-width:980px){section{scroll-margin-top:70px}}
+  .sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h2{margin:0;font-size:23px;font-weight:600;letter-spacing:-.015em}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;padding:2px 8px;
+    border-radius:99px;border:1px solid var(--line);color:var(--slate);background:var(--card);white-space:nowrap}
+  .chip.hot{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .sec-lede{color:var(--slate);margin:0 0 20px;font-size:15px}
+
+  /* 分栏标题：问答 vs 代码 */
+  .lane{display:flex;align-items:center;gap:10px;margin:34px 0 14px;
+    font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--faint)}
+  .lane::after{content:"";flex:1;height:1px;background:var(--line)}
+  .lane.qa{color:var(--accent)}
+
+  h3{margin:28px 0 10px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  main ul,main ol{margin:0 0 16px;padding-left:22px}
+  main li{margin-bottom:7px}
+  b,strong{font-weight:600}
+  a{color:var(--accent)}
+
+  .q{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;
+    margin:0 0 16px;box-shadow:var(--shadow)}
+  .q > :last-child{margin-bottom:0}
+  .q.must{border-left:3px solid var(--accent)}
+  .q.follow{border-left:3px solid var(--line);background:transparent;box-shadow:none}
+  .q-tag{display:inline-block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:7px}
+  .q.must .q-tag{color:var(--accent)}
+  .q.follow .q-tag{color:var(--faint)}
+  .q-ask{font-weight:600;margin:0 0 10px;font-size:15.5px;line-height:1.55}
+
+  .volunteer{border:1px solid color-mix(in srgb,var(--signal) 32%,var(--line));background:var(--signal-soft);
+    border-radius:8px;padding:14px 18px;margin:0 0 16px}
+  .volunteer > :last-child{margin-bottom:0}
+  .volunteer .q-tag{color:var(--signal)}
+
+  /* 代码讲解块 */
+  .cw{margin:0 0 20px}
+  .cw-file{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--accent);
+    background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));
+    border-radius:5px;padding:2px 8px;display:inline-block;margin-bottom:9px}
+  .cw h4{margin:0 0 9px;font-size:15px;font-weight:600}
+
+  .tw{overflow-x:auto;margin:0 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{padding:8px 13px;text-align:left;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+  th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600;background:var(--line-soft)}
+  tbody tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+  td.win{color:var(--accent);font-weight:600}
+  table.wrap td{white-space:normal;min-width:150px}
+
+  code{background:var(--code-bg);padding:1.5px 5px;border-radius:4px;font-size:.885em}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:13px 16px;
+    overflow-x:auto;margin:0 0 16px;font-size:13px;line-height:1.7}
+  pre code{background:none;padding:0}
+
+  /* highlight.js 主题：跟着 token 走，深浅色都适配 */
+  .hljs-keyword,.hljs-literal,.hljs-type{color:var(--hl-kw)}
+  .hljs-string,.hljs-meta .hljs-string{color:var(--hl-str)}
+  .hljs-number{color:var(--hl-num)}
+  .hljs-comment{color:var(--hl-com);font-style:italic}
+  .hljs-title,.hljs-title.function_{color:var(--hl-fn);font-weight:600}
+  .hljs-built_in,.hljs-params{color:var(--hl-builtin)}
+  .hljs-attr,.hljs-property{color:var(--ink)}
+
+  .check{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:2px}
+  .check li{margin:0}
+  .check label{display:flex;gap:11px;align-items:flex-start;padding:9px 13px;border-radius:7px;cursor:pointer}
+  .check label:hover{background:var(--line-soft)}
+  .check input{margin:5px 0 0;accent-color:var(--accent);width:16px;height:16px;flex:none}
+  .check input:checked + span{color:var(--faint);text-decoration:line-through}
+  .check span{font-size:14.5px;line-height:1.6}
+  .reset{margin-top:12px;font-size:12.5px;color:var(--faint);background:none;border:none;padding:5px 0;
+    cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit}
+  .reset:hover{color:var(--accent)}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+</style>
+
+<div class="shell">
+
+<header class="masthead">
+  <div class="mast-id">
+    <div class="eyebrow">COMP3710 · Lab Demonstration 2</div>
+    <h1>Demo 应答手册</h1>
+    <p class="mast-sub">每个 Part 下并排放两样东西：<b>被问到什么怎么答</b>，和<b>老师指着代码问「这段在干嘛」怎么答</b>。所有数字与 shape 都是实测的。</p>
+  </div>
+  <div class="rubric">
+    <div class="rubric-label">评分标准的实际分配</div>
+    <div class="bar">
+      <span class="seg-code">20</span><span class="seg-qa">40</span>
+      <span class="seg-craft">20</span><span class="seg-tell">20</span>
+    </div>
+    <div class="rubric-key">
+      <span><b>20%</b> 代码能跑</span><span><b>40%</b> 回答问题</span>
+      <span><b>20%</b> 规范与 AI</span><span><b>20%</b> 讲述</span>
+    </div>
+  </div>
+</header>
+
+<div class="body-grid">
+
+<nav class="rail" id="rail">
+  <div class="rail-group">开场</div>
+  <a href="#opening">三分钟自述</a>
+  <a href="#shared">三处共用设计</a>
+  <div class="rail-group">按 Part</div>
+  <a href="#p1">Part 1 · DFT<span class="mk">1</span></a>
+  <a href="#p2">Part 2 · Eigenfaces<span class="mk">1</span></a>
+  <a href="#p31">Part 3.1 · CNN<span class="mk">1</span></a>
+  <a href="#p32">Part 3.2 · DAWNBench<span class="mk">4</span></a>
+  <a href="#t1">Task 1 · VAE</a>
+  <a href="#t2">Task 2 · UNet</a>
+  <a href="#t3">Task 3 · GAN</a>
+  <div class="rail-group">收尾</div>
+  <a href="#flow">工作流<span class="mk">20%</span></a>
+  <a href="#ai">AI 使用</a>
+  <a href="#tenlines">十行速查</a>
+  <a href="#checklist">检查清单</a>
+</nav>
+
+<main>
+
+<section id="opening">
+  <div class="sec-head"><h2>三分钟自述的结构</h2></div>
+  <p class="sec-lede">不要按 Part 1→4 平铺直叙，时间不够且没有重点。</p>
+  <ol>
+    <li><b>一句话总览</b>（15 秒）：四部分全部完成，Part 4 做到 Hard 难度（VAE + UNet + GAN）。</li>
+    <li><b>拎出两个最有料的点</b>（各 60 秒）—— 拿高分靠这里：
+      <ul>
+        <li><b>DAWNBench 94.15 % / 95 秒</b>：讲「先测量、定位瓶颈在 CPU 而非 GPU、再针对性优化」的过程。</li>
+        <li><b>UNet 测试集 mean DSC 0.9774</b>：讲 DSC 该怎么算才对（两处修正）。</li>
+      </ul>
+    </li>
+    <li><b>工作流</b>（30 秒）：git 分组提交、本机 MPS 与集群 A100 双环境、slurm 参数实测核对。</li>
+    <li><b>AI 使用</b>（15 秒）：指向 <code>AI_PROMPTS.md</code>，强调是「发现并修正 AI 的错误」而非照抄。</li>
+  </ol>
+
+  <h3>仓库怎么组织的（30 秒版本）</h3>
+  <p>四个 Part 共 2479 行 Python。<code>recognition/</code> 下三个子项目用课程约定的四件套：</p>
+  <div class="tw"><table class="wrap">
+    <thead><tr><th>文件</th><th>职责</th></tr></thead>
+    <tbody>
+      <tr><td><code>modules.py</code></td><td>网络与损失的定义。<b>只定义，不训练</b></td></tr>
+      <tr><td><code>dataset.py</code></td><td>数据加载与预处理。<b>只读数据，不碰模型</b></td></tr>
+      <tr><td><code>train.py</code></td><td>训练循环、验证、存 checkpoint、画曲线</td></tr>
+      <tr><td><code>predict.py</code></td><td>载入 checkpoint 做推理与可视化（<b>demo 现场跑这个</b>）</td></tr>
+    </tbody>
+  </table></div>
+  <p>这样拆的好处：<code>predict.py</code> 不需要知道怎么训练，<code>modules.py</code> 不需要知道数据从哪来。演示时老师要看推理，直接跑 <code>predict.py</code>，它只依赖 <code>modules.py</code> 和一个 checkpoint。</p>
+</section>
+
+<section id="shared">
+  <div class="sec-head"><h2>三处共用设计</h2></div>
+  <p class="sec-lede">这三个函数在多个文件里重复出现，先讲一次，后面不再重复。</p>
+
+  <div class="cw">
+    <h4><code>pick_device()</code> — 一份代码两个环境</h4>
+<pre><code class="language-python">def pick_device() -&gt; torch.device:
+    """优先 CUDA（Rangpur A100），其次 Apple MPS，最后退回 CPU。"""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")</code></pre>
+    <p>同一份代码在 Mac（Apple MPS）和集群（CUDA A100）上都能跑，不用改任何东西。</p>
+  </div>
+
+  <div class="cw">
+    <h4><code>auto_workers()</code> — 默认值不能照抄</h4>
+<pre><code class="language-python">def auto_workers(requested: int, device: torch.device) -&gt; int:
+    if requested &gt;= 0:
+        return requested
+    return 4 if device.type == "cuda" else 0</code></pre>
+    <p><b>为什么 MPS 上要用 0 个 worker</b> —— 实测出来的反直觉结论：</p>
+    <div class="tw"><table>
+      <thead><tr><th>配置</th><th class="num">耗时</th></tr></thead>
+      <tbody>
+        <tr><td><code>num_workers=0</code></td><td class="num win">9 ms/batch</td></tr>
+        <tr><td><code>num_workers=6, persistent=True</code></td><td class="num">262 ms/batch</td></tr>
+      </tbody>
+    </table></div>
+    <p>单张 OASIS 切片解码只要约 1 ms，多进程的 IPC 序列化开销远大于收益，<b>慢 29 倍</b>。集群上 CPU 核多、数据在网络盘，多 worker 才划算。</p>
+  </div>
+
+  <div class="cw">
+    <h4><code>sync()</code> — GPU 计时的坑（Part 1 用）</h4>
+<pre><code class="language-python">def sync(device: torch.device) -&gt; None:
+    """GPU 上的算子是异步下发的，计时前必须同步，否则测到的只是下发时间。"""
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+    elif device.type == "mps":
+        torch.mps.synchronize()</code></pre>
+    <p><b>这行不加，Part 1 的所有 GPU 计时都是错的</b> —— 会测出个接近 0 的数，因为 Python 只是把 kernel 丢进队列就返回了。</p>
+  </div>
+</section>
+
+<section id="p1">
+  <div class="sec-head"><h2>Part 1 · DFT</h2><span class="chip">1 分</span><span class="chip">317 行</span></div>
+
+  <div class="tw"><table>
+    <thead><tr><th>实现</th><th class="num">N=1024</th><th class="num">N=2048</th><th class="num">N=4096</th><th>复杂度</th></tr></thead>
+    <tbody>
+      <tr><td>NumPy 朴素 DFT</td><td class="num">0.009265</td><td class="num">0.037120</td><td class="num">0.146261</td><td>O(N²)</td></tr>
+      <tr><td>PyTorch 朴素 DFT（GPU）</td><td class="num">0.002785</td><td class="num">0.006693</td><td class="num">0.010211</td><td>O(N²)</td></tr>
+      <tr><td>NumPy FFT</td><td class="num win">0.000006</td><td class="num win">0.000011</td><td class="num win">0.000019</td><td>O(N log N)</td></tr>
+      <tr><td>PyTorch FFT（GPU）</td><td class="num">0.000269</td><td class="num">0.000236</td><td class="num">0.000374</td><td>O(N log N)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">为什么最快的方法最快？</p>
+    <ol>
+      <li><b>FFT 快是因为算法，不是硬件。</b>看朴素 DFT 那一行：N 每翻一倍，耗时约 ×4（0.0093 → 0.037 → 0.146），正是 O(N²) 的特征；FFT 增长不到 2 倍。FFT 靠分治 —— 把 N 点 DFT 递归拆成两个 N/2 点，复用旋转因子的对称性 <span class="mono">W<sub>N</sub><sup>k+N/2</sup> = −W<sub>N</sub><sup>k</sup></span>，把 N² 次复数乘降到 N log N 次。</li>
+      <li><b>GPU 让朴素 DFT 快一个数量级，但改不了复杂度。</b>N=4096 时 GPU 版比 CPU 版快 14 倍，因为 N² 次乘加被摊到数千核心上；但它仍是 O(N²)，N 再翻几倍照样输给 CPU 上的 FFT。<b>并行度只能改善常数因子，不能改善复杂度。</b></li>
+      <li><b>GPU 的 FFT 反而不如 NumPy 的</b>，因为这个规模下每次 kernel 启动的固定开销（约 0.25 ms）已超过计算本身。注意 Torch FFT 那一行从 N=1024 到 4096 几乎不变 —— 测的全是启动开销。</li>
+    </ol>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">你的 naive_dft 用矩阵乘，这还算「朴素」吗？</p>
+    <p>算。矩阵形式做的仍是 N² 次复数乘加，复杂度没变，只是把循环下沉到 BLAS。我专门保留了一个双重 Python 循环版做对照：N=512 时循环版 0.0581 s、矩阵版 0.0023 s，<b>快 25 倍但复杂度相同</b> —— 这正说明复杂度和常数因子是两件事。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">GPU 版和 NumPy 的结果不完全一样？</p>
+    <p>对，相对误差约 1.78e−4。GPU 版用 complex64（单精度）而 NumPy 用 complex128。单精度尾数 24 位，累加 N 项后误差约 2<sup>−24</sup>√N，量级正好对得上。NumPy 双精度版与 FFT 的相对误差是 3.04e−13。<b>报误差要看相对值</b>：谱峰幅度约 4N/π ≈ 1300，绝对误差 0.2 其实只有 1e−4 的相对误差。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">为什么方波的频谱只有奇次谐波？Gibbs 现象能消除吗？</p>
+    <p><b>奇次谐波</b>：方波是奇函数且半波对称 <span class="mono">f(t + T/2) = −f(t)</span>，这个对称性使所有偶次谐波的积分相消，只剩奇次，幅度按 1/n 衰减。</p>
+    <p><b>Gibbs 不能消除</b>：跳变点附近的过冲幅度<b>恒定约为跳变量的 9 %</b>，增加谐波只会让过冲变窄、向不连续点收缩，但高度不变。根本原因是傅里叶级数在不连续点只能逐点收敛而非一致收敛。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>part1_dft/dft.py</code></div>
+
+  <div class="cw">
+    <h4>① 教科书式双重循环 — 只为了对照</h4>
+<pre><code class="language-python">def naive_dft_loops(x):
+    n_samples = len(x)
+    out = np.zeros(n_samples, dtype=np.complex128)
+    for k in range(n_samples):          # 每个频率 bin
+        for n in range(n_samples):      # 累加所有采样点的贡献
+            out[k] += x[n] * np.exp(-2j * np.pi * k * n / n_samples)
+    return out</code></pre>
+    <p>直接照抄 DFT 的定义式 <span class="mono">X[k] = Σₙ x[n]·e^(−2πikn/N)</span>。</p>
+  </div>
+
+  <div class="cw">
+    <h4>② NumPy 矩阵形式 — 同样 O(N²)，但快 25 倍</h4>
+<pre><code class="language-python">def _dft_matrix_np(n_samples):
+    idx = np.arange(n_samples)
+    return np.exp(-2j * np.pi * np.outer(idx, idx) / n_samples)   # W[k,n]
+
+def naive_dft(x):
+    return _dft_matrix_np(len(x)) @ x</code></pre>
+    <p>把两层循环写成一次矩阵-向量乘 <span class="mono">X = W·x</span>。<code>np.outer(idx, idx)</code> 生成 k·n 的外积矩阵。<b>乘加次数完全没变，变的只是谁在执行循环</b> —— 从 Python 解释器换成了 BLAS。</p>
+  </div>
+
+  <div class="cw">
+    <h4>③ PyTorch GPU 版 — 任务书明确要求的那个</h4>
+<pre><code class="language-python">def naive_dft_torch(x):
+    n_samples = x.shape[-1]
+    idx = torch.arange(n_samples, device=x.device, dtype=torch.float32)
+    angle = -2.0 * torch.pi * idx[:, None] * idx[None, :] / n_samples
+    # 用 cos/sin 组装复数矩阵，避免依赖后端的复数指数算子
+    w = torch.complex(torch.cos(angle), torch.sin(angle))
+    return w @ x.to(torch.complex64)</code></pre>
+    <p>三个要点，都可能被问：</p>
+    <ul>
+      <li><b><code>device=x.device</code></b>：DFT 矩阵在输入所在的设备上构造。传 GPU 张量进来，整个计算就在 GPU 上完成 —— 这就是「显式跑在 GPU 上」的实现方式。</li>
+      <li><b><code>idx[:, None] * idx[None, :]</code></b>：广播出 k·n 的外积，等价于 numpy 的 <code>outer</code>。</li>
+      <li><b>用 <code>cos</code>/<code>sin</code> 而不是复数 <code>exp</code></b>：不同后端对复数指数的支持不一致，拆成实部虚部再用 <code>torch.complex</code> 组装，到哪都能跑。</li>
+    </ul>
+  </div>
+
+  <div class="cw">
+    <h4>计时函数里的两个细节</h4>
+<pre><code class="language-python">def _time_it(fn, repeats, device=None):
+    """跑 repeats 次取最小值（最小值比均值更抗系统噪声）。"""
+    best = float("inf")
+    for _ in range(repeats):
+        start = time.perf_counter()
+        fn()
+        if device is not None:
+            sync(device)                    # 关键：等 GPU 真正算完
+        best = min(best, time.perf_counter() - start)
+    return best</code></pre>
+    <ul>
+      <li><b>取最小值不取均值</b>：均值会被偶发的系统调度、GC 拉高；最小值更接近真实开销。</li>
+      <li><b>预热</b>：正式计时前会先各跑一次，把 kernel 编译和显存分配的一次性开销排除掉。</li>
+    </ul>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">可能被指着问</div>
+    <p><code>np.linspace(0.0, T, N, endpoint=False)</code> 里的 <b><code>endpoint=False</code></b> —— 信号是周期的，<span class="mono">t=0</span> 和 <span class="mono">t=T</span> 是同一个相位点，两端都取会多采一个点导致频谱泄漏。</p>
+  </div>
+</section>
+
+<section id="p2">
+  <div class="sec-head"><h2>Part 2 · Eigenfaces</h2><span class="chip">1 分</span><span class="chip">159 行</span></div>
+
+  <div class="volunteer">
+    <div class="q-tag">主动说</div>
+    <p>随机森林准确率 <b>0.5776</b>，但多数类基线是 <b>0.4130</b>（George W Bush 一人占测试集 41 %）。<b>先说基线</b> —— 只报 0.5776 会让人以为模型还行，报了基线才看得出提升只有 16 个百分点。加 <code>class_weight='balanced'</code> 后到 <b>0.7298</b>，macro-F1 从 0.3022 提到 0.6361。</p>
+  </div>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">为什么主成分越多反而越差？</p>
+    <div class="tw"><table>
+      <thead><tr><th>主成分数</th><th class="num">25</th><th class="num">50</th><th class="num">100</th><th class="num">150</th></tr></thead>
+      <tbody><tr><td>准确率</td><td class="num">0.6304</td><td class="num win">0.6553</td><td class="num">0.5807</td><td class="num">0.5776</td></tr></tbody>
+    </table></div>
+    <p>PCA 按方差排序，但<b>方差大 ≠ 对分类有用</b>。前几十个成分捕捉人脸的主要结构差异；高阶成分捕捉的主要是光照方向与姿态 —— LFW 是自然场景采集的，这两者方差很大但与「是谁」无关。</p>
+    <p>再叠加随机森林的机制：<code>max_features</code> 默认 <code>sqrt</code>，150 维时每次分裂只抽约 12 个特征。噪声占比越高，抽到全是噪声的概率越大，单棵树越弱。所以维度从 50 增到 150，<b>信息没增加多少，噪声却稀释了有效特征被抽中的概率</b>。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">混淆矩阵说明了什么？</p>
+    <p>几乎所有样本都被判给 George W Bush。Ariel Sharon 和 Hugo Chavez 的召回率是 0。这是类别不平衡下的典型退化：模型发现「永远猜多数类」就能拿 41 %，而随机森林的 Gini 分裂准则本身不惩罚这种偏向。加权后 macro-F1 翻倍。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">紧致度曲线说明什么？</p>
+    <p>前 50 个成分解释 84.59 % 方差，前 150 个解释 94.65 %。曲线很快变平说明人脸数据的<b>内在维度远低于 1850 维的像素空间</b> —— 这正是 PCA 有效的前提。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>part2_eigenfaces/eigenfaces.py</code></div>
+
+  <div class="cw">
+    <h4>PCA 的核心就这几行</h4>
+<pre><code class="language-python">def compute_pca(X_train, X_test, n_components=N_COMPONENTS):
+    mean = np.mean(X_train, axis=0)     # 均值只用训练集算
+    X_train = X_train - mean
+    X_test = X_test - mean              # 但同一个均值也减到测试集上
+
+    U, S, Vt = np.linalg.svd(X_train, full_matrices=False)
+    components = Vt[:n_components]      # 前 k 个右奇异向量 = 主成分
+
+    X_train_pca = X_train @ components.T    # 投影到 face space
+    X_test_pca = X_test @ components.T
+    return components, S, X_train_pca, X_test_pca, mean</code></pre>
+    <p><b>这几行里藏着最容易被问的三个点</b>：</p>
+    <ol>
+      <li><b><code>mean</code> 只由 <code>X_train</code> 算</b>，然后减到两边。若用全体数据算均值，测试集的信息就通过均值泄漏进了模型。SVD 同理，只在训练集上做。</li>
+      <li><b><code>Vt[:n_components]</code></b> —— 对去均值的 X 做 SVD 得 <span class="mono">X = U S Vᵀ</span>，则协方差 <span class="mono">XᵀX = V S² Vᵀ</span>。所以 <b>V 的行就是协方差矩阵的特征向量</b>，奇异值平方正比于特征值。直接对 X 做 SVD 比先算 1850×1850 的协方差矩阵再做特征分解更稳定也更省。</li>
+      <li><b><code>full_matrices=False</code></b> —— 只算需要的那部分奇异向量。样本数 966 &lt; 特征数 1850，完整的 U 是 966×966、V 是 1850×1850，没必要。</li>
+    </ol>
+    <p><code>eigenfaces = components.reshape((N_COMPONENTS, h, w))</code> —— 主成分本身是 1850 维向量，reshape 回 50×37 就是能看的「特征脸」。</p>
+  </div>
+
+  <div class="cw">
+    <h4>我自己加的两组对照实验</h4>
+<pre><code class="language-python">def ablation(X_train_pca, X_test_pca, y_train, y_test):
+    # 实验 1：主成分个数
+    for k in (25, 50, 100, 150):
+        clf = RandomForestClassifier(n_estimators=150, random_state=RANDOM_STATE, n_jobs=-1)
+        clf.fit(X_train_pca[:, :k], y_train)
+        acc_k = (clf.predict(X_test_pca[:, :k]) == y_test).mean()
+
+    # 实验 2：类别加权
+    for weight in (None, "balanced"):
+        clf = RandomForestClassifier(..., class_weight=weight)</code></pre>
+    <p>注意 <b><code>X_train_pca[:, :k]</code></b> —— SVD 只做一次，切前 k 列就是「只保留前 k 个成分」，不用重新算。</p>
+  </div>
+</section>
+
+<section id="p31">
+  <div class="sec-head"><h2>Part 3.1 · LFW CNN</h2><span class="chip">1 分</span><span class="chip">117 行</span></div>
+  <p class="sec-lede">准确率 <b>0.8509</b>，对比 Part 2 的 0.5776（加权后 0.7298）。</p>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">CNN 为什么比 PCA + 随机森林好？</p>
+    <ol>
+      <li><b>保留了二维空间结构。</b>PCA 把图像拉平成 1850 维向量，像素的相邻关系被丢掉；卷积核在二维上滑动，天然利用「相邻像素相关」这个先验。</li>
+      <li><b>特征提取与分类是联合优化的。</b>PCA 是无监督的，按方差找基，完全不知道下游任务是分人；CNN 的卷积核是用分类损失的梯度训出来的。这解释了 Part 2 里「方差大但没用」的成分为什么存在。</li>
+      <li><b>非线性与层次性。</b>PCA 是线性变换，只能做子空间投影；CNN 通过 ReLU 堆叠出层次化特征（边缘 → 局部形状 → 面部结构）。</li>
+    </ol>
+    <p>也要<b>诚实说出代价</b>：CNN 需要更多数据和算力，可解释性差；eigenfaces 可以直接画出来看，卷积核不行。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">为什么用类别索引而不是 one-hot？</p>
+    <p>PyTorch 的 <code>nn.CrossEntropyLoss</code> 接受类别索引，内部等价于 log_softmax + NLLLoss，少一次 one-hot 展开。<b>注意与 Task 2 的区别</b>：那里任务书明确要求 one-hot 输出。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>part3_cnn/cnn_lfw.py</code></div>
+
+  <div class="cw">
+    <h4>网络结构与实测 shape</h4>
+<pre><code class="language-python">class SimpleCNN(nn.Module):
+    def __init__(self, n_classes, in_shape):
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)   # 任务书要求
+        self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)  # 两层 3x3 / 32 filters
+        self.pool = nn.MaxPool2d(2)
+        self.dropout = nn.Dropout(0.5)
+
+        # 用一次假前向推出展平后的维度，避免手算
+        with torch.no_grad():
+            dummy = torch.zeros(1, 1, *in_shape)
+            flat_dim = self._features(dummy).flatten(1).shape[1]
+
+        self.fc1 = nn.Linear(flat_dim, 128)
+        self.fc2 = nn.Linear(128, n_classes)</code></pre>
+    <div class="tw"><table>
+      <thead><tr><th>阶段</th><th>shape</th></tr></thead>
+      <tbody>
+        <tr><td>输入</td><td class="mono">(B, 1, 50, 37)</td></tr>
+        <tr><td>两层卷积 + 两次池化</td><td class="mono">(B, 32, 12, 9)</td></tr>
+        <tr><td>展平</td><td class="mono">(B, 3456)</td></tr>
+        <tr><td>输出 logits</td><td class="mono">(B, 7)</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>那段「假前向」值得讲</b>：50×37 经两次 2×2 池化不是整除（50→25→12，37→18→9），手算容易错。跑一次全零张量让 PyTorch 自己算出 3456，改输入尺寸时不用改代码。</p>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">很好的讲解点 · 参数分布</div>
+    <div class="tw"><table>
+      <thead><tr><th>层</th><th class="num">参数量</th><th class="num">占比</th></tr></thead>
+      <tbody>
+        <tr><td>conv1</td><td class="num">320</td><td class="num">0.07 %</td></tr>
+        <tr><td>conv2</td><td class="num">9,248</td><td class="num">2.0 %</td></tr>
+        <tr><td><b>fc1</b></td><td class="num win"><b>442,496</b></td><td class="num win"><b>97.7 %</b></td></tr>
+        <tr><td>fc2</td><td class="num">903</td><td class="num">0.2 %</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>97.7 % 的参数集中在第一个全连接层。</b>这正解释了为什么 <code>Dropout(0.5)</code> 放在 fc1 之后而不是卷积层之间 —— 过拟合风险几乎全在那里。卷积层参数共享，本身正则性就强。</p>
+  </div>
+</section>
+
+<section id="p32">
+  <div class="sec-head"><h2>Part 3.2 · DAWNBench</h2><span class="chip hot">4 分 · 重点</span><span class="chip">443 行</span></div>
+  <p class="sec-lede"><b>94.15 % 准确率 / 95 秒</b>（A100）。两档都达标：&gt;90 % 且 &lt;30 分钟 ✓；≥94 % 且 ≤360 秒（V100 基准）✓，快约 3.8 倍。</p>
+
+  <div class="volunteer">
+    <div class="q-tag">主线故事 · 先测量，再优化</div>
+    <ol>
+      <li><b>最初的实现</b>用 torchvision 的 <code>DataLoader</code> + PIL 增强。在 A100 上 <b>227 秒都跑不完一个 epoch</b>（97 步，即 &gt;2.3 秒/步）。</li>
+      <li><b>诊断</b>：ResNet-18 在 A100 上一步的计算量只有几十毫秒。2.3 秒/步意味着 GPU 有 98 % 的时间在等数据 —— <b>瓶颈在 CPU 侧，不在模型</b>。</li>
+      <li><b>根因</b>：a100 节点每个只有 8 个 CPU 核（作业申请 4 核），PIL 的逐张 Python 层操作喂不饱 A100。</li>
+      <li><b>对策</b>：CIFAR-10 原始像素总共只有 50000×3×32×32 = <b>153 MB</b>（uint8），相对 40 GB 显存微不足道。一次性搬进显存，增强改用张量算子。</li>
+      <li><b>结果</b>：<b>1.9 秒/epoch</b>，提速 100 倍以上。</li>
+    </ol>
+  </div>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">怎么保证 GPU 增强和原来等价？</p>
+    <p>这个一定会被问，因为「自己实现增强」最容易出错。</p>
+    <ul>
+      <li><b>随机裁剪</b>：先 reflect padding 到 40×40，再对<b>每个样本独立</b>取 [0,8] 的随机偏移裁回 32×32，与 <code>T.RandomCrop(32, padding=4, padding_mode="reflect")</code> 逐样本等价。<b>验证方法</b>：把偏移固定为 (4,4)，输出必须与原图逐像素相同 —— 我做了这个测试并通过。这同时验证了高级索引没写错位。</li>
+      <li><b>翻转</b>：每样本独立 0.5 概率，同 <code>T.RandomHorizontalFlip()</code>。</li>
+      <li><b>归一化</b>：同一组 MEAN/STD，只是先乘回 255 —— 因为跳过了 <code>ToTensor</code> 的除以 255。</li>
+    </ul>
+    <p>两条管线都保留了，<code>--loader {gpu,cpu}</code> 可切换，现场能演示对比。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">残差连接解决什么问题？</p>
+    <p>不是梯度消失（BatchNorm 已很大程度缓解），主要是<b>退化问题</b>：He 等人观察到 56 层网络的<b>训练</b>误差反而高于 20 层，说明不是过拟合而是难优化。残差块学的是 <span class="mono">F(x) = H(x) − x</span>，若最优映射接近恒等，把 F 压到 0 比让一堆非线性层拟合出恒等映射容易得多。同时捷径给梯度提供了直通路径。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">混合精度为什么既快又不掉精度？GradScaler 做什么？</p>
+    <p><b>快</b>：A100 的 Tensor Core 对 fp16/bf16 吞吐远高于 fp32，显存带宽也减半。<b>不掉精度</b>：前向反向用 fp16，但权重和优化器状态保持 fp32 主副本，累加也在 fp32 做。</p>
+    <p><b>GradScaler</b> 解决 fp16 的动态范围问题 —— 梯度常小到 fp16 的次正规数区间而下溢为 0。它把损失乘一个大缩放因子再反向，梯度等比放大避开下溢，更新前再除回去；若检测到 inf/nan 就跳过这步并调小因子。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">OneCycle / channels_last 为什么有效？</p>
+    <p><b>OneCycle</b>：先线性升到 max_lr（这里 0.4，很大）再退火到近 0。大学习率阶段起正则作用，帮助跳出尖锐极小值；后期精细收敛。配合 label smoothing 0.1，能在 30 个 epoch 的短预算内到 94 %。</p>
+    <p><b>channels_last</b>：NHWC 布局更契合 Tensor Core 的访存模式，cuDNN 卷积 kernel 在这个布局下不需额外转置。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>part3_cnn/dawnbench/</code></div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>为 32×32 改造的 ResNet-18</h4>
+<pre><code class="language-python">class ResNet(nn.Module):
+    def __init__(self, block, num_blocks, num_classes=10):
+        self.in_planes = 64
+        # 与 ImageNet 版的唯一差别就在下面这一行 + 没有 maxpool
+        self.conv1 = nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False)</code></pre>
+    <div class="tw"><table>
+      <thead><tr><th>阶段</th><th>shape</th></tr></thead>
+      <tbody>
+        <tr><td>conv1</td><td class="mono">(B, 64, 32, 32) ← <b>仍是 32×32</b></td></tr>
+        <tr><td>layer1</td><td class="mono">(B, 64, 32, 32)</td></tr>
+        <tr><td>layer2</td><td class="mono">(B, 128, 16, 16)</td></tr>
+        <tr><td>layer3</td><td class="mono">(B, 256, 8, 8)</td></tr>
+        <tr><td>layer4</td><td class="mono">(B, 512, 4, 4)</td></tr>
+        <tr><td>linear</td><td class="mono">(B, 10)</td></tr>
+      </tbody>
+    </table></div>
+    <p>参数量 11.17 M。ImageNet 版首层是 7×7 stride=2 + maxpool stride=2，进 layer1 时只剩 8×8 —— 32×32 的输入经不起这个。</p>
+<pre><code class="language-python">self.shortcut = nn.Sequential()          # 默认是恒等映射
+if stride != 1 or in_planes != planes * self.expansion:
+    self.shortcut = nn.Sequential(       # 尺寸或通道变了才用 1x1 卷积投影
+        nn.Conv2d(in_planes, planes * self.expansion, 1, stride=stride, bias=False),
+        nn.BatchNorm2d(planes * self.expansion),
+    )</code></pre>
+    <p><b>空的 <code>nn.Sequential()</code> 就是恒等映射</b> —— 只有当 stride 或通道数变化、张量加不起来时才需要投影。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">dataset.py · GPUCifar</span>
+    <h4>随机裁剪的 GPU 实现 —— 这段最可能被指着问</h4>
+<pre><code class="language-python">def _random_crop(self, x):
+    n = x.shape[0]
+    padded = F.pad(x, (4, 4, 4, 4), mode="reflect")          # (N,3,40,40)
+    offset_y = torch.randint(0, 9, (n,), device=dev)         # 每个样本独立的偏移
+    offset_x = torch.randint(0, 9, (n,), device=dev)
+    rows = offset_y.view(n, 1, 1) + torch.arange(32, device=dev).view(1, 32, 1)
+    cols = offset_x.view(n, 1, 1) + torch.arange(32, device=dev).view(1, 1, 32)
+    batch_idx = torch.arange(n, device=dev).view(n, 1, 1)
+    # 混用高级索引与切片时，高级索引的维度会排到最前面 -&gt; (N,32,32,3)
+    cropped = padded[batch_idx, :, rows, cols]
+    return cropped.permute(0, 3, 1, 2).contiguous()</code></pre>
+    <p>逐行拆解：</p>
+    <ol>
+      <li><code>F.pad(..., mode="reflect")</code> — 补到 40×40，与 torchvision 的第一步一致。</li>
+      <li><code>torch.randint(0, 9, (n,))</code> — 偏移范围 [0, 8]，因为 40−32=8。<b>形状是 <code>(n,)</code> 而不是标量</b>，所以每个样本的偏移独立，和逐张做增强等价。</li>
+      <li><code>rows</code> / <code>cols</code> — 广播出每个样本要取的 32 个行号和列号。</li>
+      <li><code>padded[batch_idx, :, rows, cols]</code> — 高级索引。<b>混用高级索引与切片 <code>:</code> 时，高级索引的维度会被排到最前面</b>，所以结果是 (N,32,32,3) 而不是 (N,3,32,32)，必须再 <code>permute</code> 回来。<b>这是最容易写错的一步。</b></li>
+    </ol>
+<pre><code class="language-python">def _random_flip(self, x):
+    do_flip = torch.rand(x.shape[0], device=x.device) &lt; 0.5
+    return torch.where(do_flip.view(-1, 1, 1, 1), x.flip(-1), x)</code></pre>
+    <p><code>torch.where</code> 按样本选择翻转版或原版，无分支、全并行。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">train.py</span>
+    <h4>混合精度与演示保护</h4>
+<pre><code class="language-python">scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+...
+with torch.amp.autocast("cuda", enabled=use_amp):
+    loss = criterion(model(x), y)
+scaler.scale(loss).backward()     # 损失放大，避免 fp16 梯度下溢
+scaler.step(optimiser)            # 内部先把梯度缩回去，遇到 inf/nan 就跳过这步
+scaler.update()                   # 动态调整缩放因子
+
+if acc &gt; best_acc:
+    best_acc = acc
+    if not args.no_save:          # 演示跑单个 epoch 时不写 checkpoint
+        torch.save(...)</code></pre>
+    <p><b><code>--no-save</code> 是演示时的保护</b>：不加的话，那一个 epoch 的模型会覆盖掉 94.15 % 的 checkpoint（保存条件是 <code>acc &gt; best_acc</code> 而 <code>best_acc</code> 从 0 开始）。<b>这个坑值得主动讲</b> —— 说明你考虑过演示场景下的副作用。</p>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">现场要跑 · 明确的 1 分</div>
+<pre><code class="language-bash">sbatch slurm/demo_dawnbench.slurm</code></pre>
+    <p>一次做完推理和一个 epoch 的训练。已彩排通过：推理 94.15 %，单轮训练 6.1 秒。</p>
+  </div>
+</section>
+
+<section id="t1">
+  <div class="sec-head"><h2>Task 1 · VAE</h2><span class="chip">Part 4</span><span class="chip">451 行</span></div>
+
+  <div class="tw"><table>
+    <thead><tr><th>latent_dim</th><th class="num">最佳验证 ELBO</th><th class="num">重建项</th><th class="num">KL 项</th></tr></thead>
+    <tbody>
+      <tr><td>2</td><td class="num">4265.93</td><td class="num">4173.72</td><td class="num">8.24</td></tr>
+      <tr><td>32</td><td class="num win">4183.05</td><td class="num">4053.01</td><td class="num">32.46</td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--slate);font-size:14.5px;margin-top:-6px">训练了两个：2 维用来直接画流形网格，32 维重建更清晰。</p>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">KL 项的作用？去掉会怎样？</p>
+    <p>KL 项把后验拉向标准正态先验。<b>去掉它就退化成普通 autoencoder</b>：编码器可以把每个样本映射到隐空间里任意孤立的点，只要解码器认得就行。后果是隐空间<b>不连续也无结构</b> —— 在两个训练样本的编码之间插值，解出来的是噪声而非合理的脑图，也无法通过采样先验生成新样本。</p>
+    <p>KL 项强制每个样本的后验都是有一定「宽度」的高斯，这些高斯必须互相重叠着铺满先验，隐空间才被填满。</p>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">怎么知道没有后验坍缩？</p>
+    <p>后验坍缩是 KL → 0：编码器输出的后验退化成先验本身，隐变量被解码器完全忽略。</p>
+    <p><b>我们的数字</b>：2 维时 KL = 8.24 nats ≈ 4.1 nats/维；32 维时 32.46 nats ≈ 1.0 nats/维。<b>都明显大于 0</b>，说明隐变量确实在被使用。若坍缩，KL 会趋近 0 而重建项居高不下。</p>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">重参数化技巧是什么，为什么需要？</p>
+    <p>目标里有一步「从 q(z|x) 采样 z」。采样本身不可导，梯度传不回编码器的 μ 和 logvar。重参数化把随机性移到参数之外：<span class="mono">z = μ + σ ⊙ ε</span>，其中 <span class="mono">ε ~ N(0, I)</span> 与参数无关。这样 z 对 μ、σ 是确定性可导的函数。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">为什么重建有点糊？</p>
+    <p>重建项是逐像素 BCE，等价于假设像素条件独立。在这个假设下，模型对不确定的细节最优的做法是输出<b>期望值</b>，也就是平均 —— 表现出来就是糊。这是 VAE 相对 GAN 的固有短板，也正是同时做 Task 3 的意义。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>recognition/vae_oasis/</code></div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>实测 shape（latent_dim=32, 128×128）</h4>
+    <div class="tw"><table>
+      <thead><tr><th>阶段</th><th>shape</th></tr></thead>
+      <tbody>
+        <tr><td>输入</td><td class="mono">(B, 1, 128, 128)</td></tr>
+        <tr><td>编码器 4 次 stride=2 卷积</td><td class="mono">(B, 256, 8, 8)</td></tr>
+        <tr><td><code>fc_mu</code> / <code>fc_logvar</code></td><td class="mono">(B, 32) / (B, 32)</td></tr>
+        <tr><td>重参数化后的 z</td><td class="mono">(B, 32)</td></tr>
+        <tr><td>解码器重建</td><td class="mono">(B, 1, 128, 128)，sigmoid 后 [0,1]</td></tr>
+      </tbody>
+    </table></div>
+    <p>参数量 2.97 M（编码器 1.74 + 解码器 1.23）。</p>
+<pre><code class="language-python">@staticmethod
+def reparameterise(mu, logvar):
+    """重参数化技巧：z = mu + sigma * eps，让采样这一步可导。"""
+    std = torch.exp(0.5 * logvar)
+    return mu + std * torch.randn_like(std)</code></pre>
+    <p><b>为什么网络输出 <code>logvar</code> 而不是 <code>sigma</code></b>：方差必须为正。直接输出 sigma 需要额外约束；输出 log 方差则取值可以是整个实轴，<code>exp(0.5 * logvar)</code> 出来自然为正，数值也更稳定。</p>
+    <p><b>为什么这样就可导</b>：随机性被隔离在 <code>randn_like</code> 里，它与网络参数无关。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>损失函数</h4>
+<pre><code class="language-python">def vae_loss(recon, x, mu, logvar, beta=1.0):
+    """ELBO 的负值：重建项 (BCE) + beta * KL 项。"""
+    recon_loss = F.binary_cross_entropy(recon, x, reduction="sum") / x.size(0)
+    kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / x.size(0)
+    return recon_loss + beta * kl, recon_loss, kl</code></pre>
+    <ul>
+      <li><b><code>reduction="sum"</code> 再除以 batch</b> = 每张图上所有像素的 BCE 之和。所以数值在几千量级（128×128 = 16384 个像素）。用 <code>"mean"</code> 会把 KL 和重建的相对权重搞错。</li>
+      <li><b>KL 那一行</b>是两个高斯之间 KL 散度的解析解。q = N(μ, σ²)、p = N(0, I) 时可以直接写成闭式，不需要采样估计。</li>
+    </ul>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">predict.py</span>
+    <h4>两个自己写的工具</h4>
+<pre><code class="language-python">def normal_ppf(q):
+    """标准正态的分位数函数。等价于 scipy.stats.norm.ppf，但不依赖 scipy——
+    集群 conda 环境里没装。ppf(q) = sqrt(2) * erfinv(2q - 1)。"""
+    q = torch.as_tensor(np.asarray(q, dtype=np.float64))
+    return (torch.sqrt(torch.tensor(2.0, dtype=torch.float64)) *
+            torch.erfinv(2 * q - 1)).numpy()
+
+grid_x = normal_ppf(np.linspace(0.02, 0.98, n))     # 按分位数取，不是等距</code></pre>
+    <p>实测与 scipy 的最大偏差 <b>8.882e−16</b>（双精度的噪声水平）。</p>
+    <p><b>为什么用分位数</b>：先验是标准正态。等距取点会让网格边缘落在概率密度极低的区域，那里模型训练时几乎没见过，解出来的图不可信。分位数采样让网格<b>均匀覆盖概率质量</b>。</p>
+<pre><code class="language-python">def pca_2d(latents):
+    """UMAP 的兜底：集群没装 umap-learn，PCA 用 torch 的 SVD 就能做。"""
+    centred = latents - latents.mean(dim=0, keepdim=True)
+    u, s, _ = torch.linalg.svd(centred, full_matrices=False)
+    projected = u[:, :2] * s[:2]
+    ratio = (s ** 2 / (s ** 2).sum())[:2]
+    return projected.numpy(), ratio.numpy()</code></pre>
+    <p><code>u[:, :2] * s[:2]</code> 就是数据在前两个主成分上的坐标。</p>
+  </div>
+</section>
+
+<section id="t2">
+  <div class="sec-head"><h2>Task 2 · UNet</h2><span class="chip hot">Part 4 · 重点</span><span class="chip">474 行</span></div>
+
+  <div class="tw"><table>
+    <thead><tr><th>类别</th><th>组织</th><th class="num">像素占比</th><th class="num">测试集 DSC</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>背景</td><td class="num">72.30 %</td><td class="num win">0.9993</td></tr>
+      <tr><td>1</td><td>脑脊液 CSF</td><td class="num">5.66 %</td><td class="num win">0.9651</td></tr>
+      <tr><td>2</td><td>灰质</td><td class="num">11.39 %</td><td class="num win">0.9658</td></tr>
+      <tr><td>3</td><td>白质</td><td class="num">10.65 %</td><td class="num win">0.9795</td></tr>
+      <tr><td><b>mean</b></td><td></td><td class="num"></td><td class="num win"><b>0.9774</b></td></tr>
+    </tbody>
+  </table></div>
+  <p style="color:var(--slate);font-size:14.5px;margin-top:-6px">测试集 544 张，完全未参与训练与调参。<b>四个标签全部 &gt; 0.9。</b></p>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">skip connection 为什么对分割是关键？</p>
+    <p>分割要同时回答两个问题：<b>「这是什么组织」</b>（需要大范围上下文）和<b>「边界在哪里」</b>（需要高分辨率细节）。</p>
+    <p>编码器不断下采样，感受野变大，语义越来越强，但空间精度被丢掉 —— 到 bottleneck 时特征图只有 16×16，无法精确定位边界。skip connection 把编码器每一级的高分辨率特征直接拼接到解码器对应级，<b>把丢掉的空间细节补回来</b>。没有它，输出会是语义正确但边界糊成一团的分割。</p>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">为什么用 CE + Dice 的组合损失？</p>
+    <ul>
+      <li><b>纯 CE 的问题</b>：背景占 72.30 % 的像素。CE 是逐像素平均的，模型只要把所有像素判成背景就能拿到不错的损失值。</li>
+      <li><b>纯 Dice 的问题</b>：对小目标梯度不稳定，某个类在某张图上完全不存在时分母趋零，训练早期容易震荡。</li>
+      <li><b>各占一半</b>：CE 提供稳定的逐像素梯度信号；Dice 直接优化评测指标本身，天然对类别不平衡不敏感。</li>
+    </ul>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">为什么 c1（CSF）的 DSC 最低？</p>
+    <p>两个原因叠加：<b>占比小</b>（只有 5.66 % 的像素）；<b>形状细长</b>（多分布在脑室边缘和脑沟里，边界像素占其总面积的比例最高）。Dice 对小目标的边界误差最敏感 —— 错一圈像素，对小结构是很大的相对损失，对大结构几乎可忽略。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">4 个标签分别是什么组织？你怎么确定的？</p>
+    <p>数据集没给标签字典。我用<b>各标签区域在原图中的平均灰度</b>反推：c0 = 0.0551、c1 = 0.1407、c2 = 0.3153、c3 = 0.4755。灰度严格单调递增，与 T1 加权 MRI 的组织对比度顺序完全一致：背景最暗 → CSF（T1 上低信号）→ 灰质 → 白质最亮。</p>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">mean DSC 0.9774 是不是过拟合？为什么不重新划分数据集？</p>
+    <p><b>不是过拟合</b>：数字来自 544 张测试集切片，该划分从头到尾没参与训练与调参；checkpoint 按<b>验证集</b>平均 DSC 选（第 22 个 epoch），测试集只在最后评估一次。验证集对应数字 0.9770，两者非常接近。</p>
+    <p><b>不重新划分</b>：自带划分是<b>按病例分开</b>的。同一病例的相邻切片高度相关 —— <code>case_441_slice_10</code> 和 <code>slice_11</code> 几乎一样。随机重新切分会让同一病例的切片同时落进训练集和测试集，造成严重的信息泄漏。</p>
+  </div>
+
+  <div class="lane">代码讲解 · <code>recognition/unet_oasis/</code></div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>实测 shape（base=32, 输入 1×256×256），参数量 7.76 M</h4>
+    <div class="tw"><table>
+      <thead><tr><th>阶段</th><th>shape</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>enc1</td><td class="mono">(B, 32, 256, 256)</td><td>↓ 这四个要留着做 skip</td></tr>
+        <tr><td>enc2</td><td class="mono">(B, 64, 128, 128)</td><td></td></tr>
+        <tr><td>enc3</td><td class="mono">(B, 128, 64, 64)</td><td></td></tr>
+        <tr><td>enc4</td><td class="mono">(B, 256, 32, 32)</td><td></td></tr>
+        <tr><td><b>bottleneck</b></td><td class="mono"><b>(B, 512, 16, 16)</b></td><td>感受野最大，空间精度最低</td></tr>
+        <tr><td>dec4</td><td class="mono">(B, 256, 32, 32)</td><td>↑ 这四个各拼一次 skip</td></tr>
+        <tr><td>dec3</td><td class="mono">(B, 128, 64, 64)</td><td></td></tr>
+        <tr><td>dec2</td><td class="mono">(B, 64, 128, 128)</td><td></td></tr>
+        <tr><td>dec1</td><td class="mono">(B, 32, 256, 256)</td><td></td></tr>
+        <tr><td>head</td><td class="mono">(B, 4, 256, 256)</td><td>4 通道 logits</td></tr>
+      </tbody>
+    </table></div>
+<pre><code class="language-python">def forward(self, x):
+    e1 = self.enc1(x)
+    e2 = self.enc2(self.pool(e1))
+    e3 = self.enc3(self.pool(e2))
+    e4 = self.enc4(self.pool(e3))
+    b = self.bottleneck(self.pool(e4))
+
+    d4 = self.dec4(torch.cat([self.up4(b), e4], dim=1))   # skip connection
+    d3 = self.dec3(torch.cat([self.up3(d4), e3], dim=1))
+    d2 = self.dec2(torch.cat([self.up2(d3), e2], dim=1))
+    d1 = self.dec1(torch.cat([self.up1(d2), e1], dim=1))
+    return self.head(d1)                                   # logits (B, C, H, W)</code></pre>
+    <p><b><code>torch.cat([..., e4], dim=1)</code> 是沿通道维拼接</b>，不是相加。<code>up4(b)</code> 输出 (B,256,32,32)，<code>e4</code> 也是 (B,256,32,32)，拼完是 (B,512,32,32) —— 所以 <code>dec4 = DoubleConv(chs[3]*2, chs[3])</code> 的输入通道是 512。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>DSC 的两处修正 —— 最能体现理解的部分</h4>
+    <p><b>修正 1：软 Dice 只能当损失，不能当指标</b></p>
+<pre><code class="language-python">def dice_per_class(logits, target_one_hot, eps=1e-6):
+    """**软** Dice：直接用 softmax 概率算，可导，专门给损失函数用。
+
+    注意不要拿它当评测指标上报 —— 评分要求的 DSC 是对**硬预测**（argmax 之后
+    的类别图）算的。软 Dice 在模型不自信时会偏低，在过分自信时又会偏高。
+    """
+    probs = F.softmax(logits, dim=1)</code></pre>
+    <p><b>修正 2：DSC 是比值，不能按 batch 平均</b></p>
+<pre><code class="language-python">@torch.no_grad()
+def hard_dice_counts(logits, target_one_hot):
+    """返回逐类的 (交集, 基数) 计数，用于跨 batch 累加。
+
+    为什么要返回计数而不是直接返回 DSC：DSC 是个比值，
+    「先按 batch 算 DSC 再取平均」并不等于「整个数据集上的 DSC」，
+    而且最后一个不满的 batch 会被赋予同等权重。正确做法是把分子分母
+    分别累加完，最后再做一次除法。
+    """
+    num_classes = logits.shape[1]
+    pred = F.one_hot(logits.argmax(dim=1), num_classes).permute(0, 3, 1, 2).float()
+    dims = (0, 2, 3)
+    intersection = torch.sum(pred * target_one_hot, dims)
+    cardinality = torch.sum(pred + target_one_hot, dims)
+    return intersection, cardinality</code></pre>
+    <p>用起来是这样：</p>
+<pre><code class="language-python">inter = torch.zeros(NUM_CLASSES, device=device)
+card = torch.zeros(NUM_CLASSES, device=device)
+for x, y in loader:
+    i, c = hard_dice_counts(model(x), to_one_hot(y, NUM_CLASSES))
+    inter += i          # 分子分母分别累加
+    card += c
+return dice_from_counts(inter, card)    # 全部累完再除一次</code></pre>
+    <p>数学上：<span class="mono">2ΣI / ΣC ≠ (1/n)·Σ(2Iᵢ/Cᵢ)</span>。</p>
+    <p><code>dims = (0, 2, 3)</code> —— 沿 batch、高、宽求和，<b>保留通道维</b>，所以结果是每类一个数。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">dataset.py</span>
+    <h4>整个文件最关键的一行</h4>
+<pre><code class="language-python">def _load(self, path, nearest=False):
+    img = Image.open(path).convert("L")
+    if self.image_size:
+        img = img.resize((self.image_size, self.image_size),
+                         Image.NEAREST if nearest else Image.BILINEAR)</code></pre>
+    <p><b><code>Image.NEAREST</code> 那个三元表达式</b>：标签灰度 {0, 85, 170, 255} 是<b>类别编号</b>不是连续量。双线性插值会在边界产生 42、127 这样的中间值，映射回类别时会凭空造出错误归属。原图是连续量，用双线性。</p>
+<pre><code class="language-python">seg_lookup = {p.name.replace("seg_", "", 1): p for p in self.seg_dir.glob("*.png")}
+for p in self.img_paths:
+    key = p.name.replace("case_", "", 1)
+    if key not in seg_lookup:
+        raise KeyError(f"{p.name} 找不到对应标签")</code></pre>
+    <p><code>case_441_slice_0.nii.png</code> 去掉前缀是 <code>441_slice_0.nii.png</code>，<code>seg_441_slice_0.nii.png</code> 去掉前缀也是它 —— 用这个当 key 配对。<b>找不到就直接抛异常</b>，不静默跳过：数据错位是最难查的 bug。</p>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">现场要跑 · 任务书明确要求</div>
+<pre><code class="language-bash">sbatch --export=ALL,ONLY=unet slurm/predict.slurm</code></pre>
+    <p>已彩排通过。配合 <code>outputs/segmentation_examples.png</code>（原图 / 真值 / 预测三列）讲解。</p>
+  </div>
+</section>
+
+<section id="t3">
+  <div class="sec-head"><h2>Task 3 · GAN</h2><span class="chip">Part 4</span><span class="chip">518 行</span></div>
+
+  <div class="lane qa">问答</div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">怎么证明没有 mode collapse？</p>
+    <p><b>不要说「你看图挺多样的」</b> —— 那是主观判断。用数字：</p>
+    <p style="border-left:3px solid var(--accent);padding-left:14px;color:var(--slate)">多样性 = 样本两两之间的平均 L2 距离，与<b>真实数据的同一指标</b>做比值。</p>
+    <div class="tw"><table>
+      <thead><tr><th>epoch</th><th class="num">6</th><th class="num">15</th><th class="num">43</th><th class="num">80（最终）</th></tr></thead>
+      <tbody><tr><td>多样性 / 真实数据</td><td class="num">24 %</td><td class="num">65 %</td><td class="num">90 %</td><td class="num win">84 %</td></tr></tbody>
+    </table></div>
+    <p><b>独立复核</b>：<code>predict.py</code> 用<b>测试集</b>（544 张，完全未参与训练）作基准重算，得 <b>88 %</b>（26.70 / 30.31）。训练时那个 84 % 用的是当轮最后一个训练 batch 作基准。两个数一致、测试集上还略好 —— 说明这个指标是稳的，不是挑出来的数字。</p>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">为什么曲线是 V 形？第 6 轮的 24 % 不是崩塌吗？</p>
+    <p><b>不是。</b>训练初期，生成器最省力的策略是输出所有脑图的「平均」—— 单张看起来像个模糊的脑，能骗过还很弱的判别器，但彼此几乎一样，所以多样性先跌到 24 %。等判别器学会识破这种平均图之后，生成器被迫去覆盖真实分布的各个区域，多样性才开始爬升。</p>
+    <p><b>低点不是 mode collapse，区别在于能否自行恢复</b> —— 真正的崩塌会一直停在低位甚至继续恶化。同期损失也印证：判别器损失稳定在 1.43–1.48（接近均衡值 ln 4 ≈ 1.386），生成器损失从 1.20 降到 0.85。</p>
+  </div>
+
+  <div class="q must">
+    <div class="q-tag">必答</div>
+    <p class="q-ask">你做了哪些事来防止崩塌？</p>
+    <div class="tw"><table class="wrap">
+      <thead><tr><th>措施</th><th>针对的失效模式</th></tr></thead>
+      <tbody>
+        <tr><td><b>R1 梯度惩罚</b></td><td>判别器过强 → 生成器梯度消失。惩罚 D 在<b>真实样本处</b>梯度的平方范数，约束成局部 Lipschitz。惰性正则每 16 步一次</td></tr>
+        <tr><td><b>生成器 EMA</b></td><td>采样时权重震荡。用指数滑动平均后的权重采样</td></tr>
+        <tr><td><b>TTUR</b></td><td>D/G 强弱失衡。D 用 3e−4、G 用 2e−4</td></tr>
+        <tr><td><b>标签平滑 0.9</b></td><td>D 进入饱和区后梯度 ≈ 0</td></tr>
+        <tr><td><b>InstanceNorm 而非 BatchNorm</b></td><td>后者让 batch 内样本通过统计量互相耦合</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="q follow">
+    <div class="q-tag">追问</div>
+    <p class="q-ask">损失值能说明生成质量吗？插值图说明了什么？</p>
+    <p><b>损失不能</b>，这是 GAN 最反直觉也最难调的地方。D 和 G 是对抗的，损失下降可能只是意味着对手变弱了。VAE 有 ELBO 这个明确的似然下界可以监控，GAN 没有。所以才需要多样性指标这类<b>外部</b>评价。</p>
+    <p><b>插值图</b>是 8 行 × 10 步的隐空间线性插值。每一行都是<b>连续形变</b> —— 脑室从宽变窄、从蝶形收成裂缝，颅骨轮廓同步微调，全程没有突跳。崩塌的生成器会在途中从一个模式硬切到另一个。这是独立于多样性指标的第二条证据。</p>
+  </div>
+
+  <div class="volunteer">
+    <div class="q-tag">主动说局限 · 比被问出来好</div>
+    <ul style="margin-bottom:0">
+      <li><b>样本左右对称性偏强。</b>真实脑切片是近似对称而非严格对称；数据经过配准且 128×128 下细微不对称信息有限，生成器学到了「对称」这个捷径。</li>
+      <li><b>只覆盖中部轴位层面</b> —— 这是忠实反映训练数据，不是模型缺陷。</li>
+      <li><b>没做 FID。</b>多样性指标能证明「没崩塌」，不能完整衡量「有多真实」。</li>
+    </ul>
+  </div>
+
+  <div class="lane">代码讲解 · <code>recognition/gan_oasis/</code></div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>实测 shape（latent_dim=128, base=64, 128×128）</h4>
+    <div class="tw"><table>
+      <thead><tr><th>阶段</th><th>shape</th></tr></thead>
+      <tbody>
+        <tr><td>z</td><td class="mono">(B, 128)</td></tr>
+        <tr><td>生成器每次上采样</td><td class="mono">4×4 → 8×8 → 16×16 → 32×32 → 64×64 → 128×128</td></tr>
+        <tr><td>生成器输出</td><td class="mono">(B, 1, 128, 128)，tanh 后 [−1, 1]</td></tr>
+        <tr><td>判别器输出</td><td class="mono">(B,)，<b>logit，未过 sigmoid</b></td></tr>
+      </tbody>
+    </table></div>
+    <p>生成器 13.24 M，判别器 11.16 M。<b>判别器为什么不过 sigmoid</b>：配 <code>BCEWithLogitsLoss</code> 使用，它内部把 sigmoid 和 BCE 合并计算（log-sum-exp 技巧），数值上比先 sigmoid 再 BCE 稳定得多。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>R1 梯度惩罚</h4>
+<pre><code class="language-python">def r1_penalty(discriminator, real_images):
+    """R1 梯度惩罚：判别器在**真实样本**处梯度的平方范数。"""
+    real_images = real_images.detach().requires_grad_(True)
+    logits = discriminator(real_images)
+    grad = torch.autograd.grad(
+        outputs=logits.sum(), inputs=real_images, create_graph=True)[0]
+    return grad.pow(2).flatten(1).sum(1).mean()</code></pre>
+    <ul>
+      <li><b><code>detach().requires_grad_(True)</code></b> — 我们要的是 logits 对<b>输入图像</b>的梯度，不是对参数的。先 detach 断开原来的图，再标记需要梯度。</li>
+      <li><b><code>create_graph=True</code></b> — 这个惩罚项本身还要再对参数求一次导（二阶导），所以求梯度的过程也必须建图。<b>这是它贵的原因，也是要惰性正则的原因。</b></li>
+    </ul>
+<pre><code class="language-python">if step % args.r1_every == 0:
+    penalty = r1_penalty(disc, real)
+    loss_d = loss_d + (args.r1_gamma / 2) * penalty * args.r1_every</code></pre>
+    <p><b>乘 <code>r1_every</code> 是为了补偿频率</b>：每 16 步做一次但强度乘 16，平均下来与每步都做等价，算力却省了 15/16。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">modules.py</span>
+    <h4>多样性指标 —— 本任务的核心贡献</h4>
+<pre><code class="language-python">@torch.no_grad()
+def diversity_score(images, max_pairs=2048):
+    """样本两两之间的平均 L2 距离 —— 用来量化 mode collapse。"""
+    flat = images.flatten(1)
+    n = flat.size(0)
+    idx_a = torch.randint(0, n, (max_pairs,), device=flat.device)
+    idx_b = torch.randint(0, n, (max_pairs,), device=flat.device)
+    keep = idx_a != idx_b                       # 排除自己和自己配对
+    return (flat[idx_a[keep]] - flat[idx_b[keep]]).norm(dim=1).mean().item()</code></pre>
+    <p><b><code>keep = idx_a != idx_b</code> 这行不能少</b>：自己和自己的距离是 0，混进去会把平均值拉低，让健康的模型看起来像崩塌了。</p>
+    <p>用随机配对而不是算全部 n(n−1)/2 对，是因为后者在 n 大时开销平方增长，而随机 2048 对的估计已经足够稳定。</p>
+  </div>
+
+  <div class="cw">
+    <span class="cw-file">train.py</span>
+    <h4>训练循环里的两处关键</h4>
+<pre><code class="language-python">fake = gen(z).detach()          # detach：这一步不更新生成器
+loss_d = (bce(logits_real, torch.full_like(logits_real, args.label_smooth))
+          + bce(logits_fake, torch.zeros_like(logits_fake)))</code></pre>
+    <p><b><code>.detach()</code> 必须有</b>：更新判别器时，梯度不能流回生成器。忘了这个的话生成器会朝「帮判别器分辨」的方向更新，训练立刻毁掉。</p>
+<pre><code class="language-python">fake = gen(z)                   # 这次不 detach
+loss_g = bce(disc(fake), torch.ones(batch, device=device))</code></pre>
+    <p><b>非饱和损失</b>：给假样本打上「真」的标签去算 BCE，等价于最大化 <span class="mono">log D(G(z))</span>。原始 GAN 论文的形式是最小化 <span class="mono">log(1−D(G(z)))</span>，在训练早期判别器很强时梯度几乎为 0 —— 同一篇论文里就指出了这个问题并给出了这个替代形式。</p>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="sec-head"><h2>工作流与工程实践</h2><span class="chip hot">20 % 在这里</span></div>
+
+  <h3>Git</h3>
+  <ul>
+    <li>十余个 commit，<b>按 Part 分组</b>，每条 message 说明<b>改动的理由</b>而非只说改了什么。</li>
+    <li>远端原本有一个 initial commit，本地历史是从 Lab 1 仓库带过来的独立根。处理方式：<code>git reset --soft origin/main</code> 把分支指针移到远端，工作树不动，再重新分组提交。这样历史线性、<b>不需要 force push</b>、远端的 commit 也没丢。（对比：AI 最初给的脚本写的是 <code>push --force-with-lease</code>，那会覆盖掉远端那个 commit。）</li>
+    <li><code>.gitignore</code> 排除数据集与 checkpoint，但<b>保留 <code>outputs/</code> 下的结果图</b> —— 它们是演示证据和 README 结果表格的出处，总共不到 1 MB。</li>
+  </ul>
+
+  <h3>集群配置（实测核对，不是照抄模板）</h3>
+  <div class="tw"><table class="wrap">
+    <thead><tr><th>常见写法</th><th>实际情况</th><th>后果</th></tr></thead>
+    <tbody>
+      <tr><td><code>--mem=32G</code></td><td>所有 a100 节点 <code>RealMemory=1</code></td><td>作业<b>无限期 PENDING</b></td></tr>
+      <tr><td><code>--partition=comp3710</code></td><td><code>AllowAccounts=comp3710</code>，账号关联未开通</td><td><code>PENDING (PartitionConfig)</code></td></tr>
+      <tr><td><code>module load cuda</code></td><td>conda 环境是 torch 2.13.0+<b>cu130</b>，自带运行时</td><td>版本冲突风险</td></tr>
+    </tbody>
+  </table></div>
+  <p>另外：<b>登录节点不跑计算任务</b>，需要下载数据就提交 <code>--partition=cpu</code> 的作业。</p>
+</section>
+
+<section id="ai">
+  <div class="sec-head"><h2>AI 使用</h2><span class="chip hot">务必主动讲</span></div>
+  <p class="sec-lede">评分标准写明「把题目抄给 AI、把答案抄回来」<b>不算合格用法</b>，要求展示「精炼提示、尝试不同方法、评估并改进 AI 生成的结果」。</p>
+
+  <p>指向 <code>AI_PROMPTS.md</code>，重点讲<b>发现并修正了 AI 的哪些错误</b>：</p>
+  <ol>
+    <li>Part 1 漏掉了任务书要求的 PyTorch / GPU 实现 —— 重读任务书才发现</li>
+    <li>DSC 用软 Dice 当评测指标（应该用硬预测）</li>
+    <li>DSC 按 batch 平均（比值不能这样平均）</li>
+    <li>slurm 的三个参数是按模板猜的，实测后全错</li>
+    <li>多进程 DataLoader 在 Mac 上是负优化（慢 29 倍）</li>
+    <li>标签解码为每张图分配 H×W×4 的临时数组（改成 256 项查找表）</li>
+  </ol>
+  <p>以及<b>自己补做的</b>：Part 2 的基线与两组消融、Part 3.2 的 GPU 数据管线与等价性验证、Task 3 的多样性指标。</p>
+  <p><b>可能被要求提供 prompt 历史</b> —— <code>AI_PROMPTS.md</code> 就是这份材料。</p>
+</section>
+
+<section id="tenlines">
+  <div class="sec-head"><h2>老师最可能指着问的十行</h2></div>
+  <div class="tw"><table class="wrap">
+    <thead><tr><th>位置</th><th>那行代码</th><th>一句话答案</th></tr></thead>
+    <tbody>
+      <tr><td><code>dft.py</code></td><td><code>sync(device)</code></td><td>GPU 算子异步下发，不同步就只测到下发时间</td></tr>
+      <tr><td><code>dft.py</code></td><td><code>torch.complex(cos, sin)</code></td><td>不依赖后端的复数指数算子，到哪都能跑</td></tr>
+      <tr><td><code>eigenfaces.py</code></td><td><code>mean = np.mean(X_train, axis=0)</code></td><td>均值只用训练集算，否则测试集信息泄漏</td></tr>
+      <tr><td><code>cnn_lfw.py</code></td><td>假前向推 <code>flat_dim</code></td><td>50×37 两次池化不整除，手算易错</td></tr>
+      <tr><td><code>dawnbench/modules.py</code></td><td><code>nn.Conv2d(3, 64, 3, stride=1)</code></td><td>32×32 经不起 ImageNet 版的 4 倍下采样</td></tr>
+      <tr><td><code>dawnbench/dataset.py</code></td><td><code>padded[batch_idx, :, rows, cols]</code></td><td>高级索引维度排最前，结果要 permute 回来</td></tr>
+      <tr><td><code>vae/modules.py</code></td><td><code>torch.exp(0.5 * logvar)</code></td><td>输出 log 方差保证 sigma 恒正、数值更稳</td></tr>
+      <tr><td><code>unet/modules.py</code></td><td><code>hard_dice_counts</code> 返回计数</td><td>DSC 是比值，batch 平均 ≠ 数据集级</td></tr>
+      <tr><td><code>unet/dataset.py</code></td><td><code>Image.NEAREST if nearest</code></td><td>标签是类别编号，插值会造出不存在的类别</td></tr>
+      <tr><td><code>gan/train.py</code></td><td><code>gen(z).detach()</code></td><td>更新判别器时梯度不能流回生成器</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="checklist">
+  <div class="sec-head"><h2>演示前检查清单</h2></div>
+  <p class="sec-lede">勾选状态保存在这台设备的浏览器里。</p>
+  <ul class="check" id="check">
+    <li><label><input type="checkbox" data-k="vpn"><span>UQ VPN 已连（否则 ssh 不通）</span></label></li>
+    <li><label><input type="checkbox" data-k="ssh"><span><code>ssh rangpur</code> 能登上</span></label></li>
+    <li><label><input type="checkbox" data-k="sync"><span>集群上代码是最新的（<code>git pull</code> 或 rsync）</span></label></li>
+    <li><label><input type="checkbox" data-k="ckpt"><span>checkpoint 都在：<code>part3_cnn/dawnbench/</code>、<code>recognition/{unet,vae,gan}_oasis/</code></span></label></li>
+    <li><label><input type="checkbox" data-k="queue"><span>留出排队时间 —— a100 分区高峰时会 <code>PENDING (Resources)</code></span></label></li>
+    <li><label><input type="checkbox" data-k="d1"><span>预跑 <code>sbatch slurm/demo_dawnbench.slurm</code>（Part 3.2，明确的 1 分）</span></label></li>
+    <li><label><input type="checkbox" data-k="d2"><span>预跑 <code>sbatch --export=ALL,ONLY=unet slurm/predict.slurm</code>（Task 2）</span></label></li>
+    <li><label><input type="checkbox" data-k="gh"><span>GitHub 仓库能当场登录展示（可能被要求证明是本人账号）</span></label></li>
+    <li><label><input type="checkbox" data-k="id"><span>学生证带上（身份确认）</span></label></li>
+    <li><label><input type="checkbox" data-k="ai"><span><code>AI_PROMPTS.md</code> 能当场打开</span></label></li>
+  </ul>
+  <button class="reset" id="reset">清空全部勾选</button>
+</section>
+
+<footer>
+  Markdown 版本在仓库根目录：<code>DEMO_PREP.md</code>（问答）与 <code>CODE_WALKTHROUGH.md</code>（代码讲解）。
+  所有数字、shape 与参数量均为实测，来源见各子目录 README 与 <code>logs/</code>。
+</footer>
+
+</main>
+</div>
+</div>
+
+<script>
+(function(){
+  if (window.hljs) { try { hljs.highlightAll(); } catch(e) {} }
+
+  // 勾选状态存本地，纯粹是备考时的便利；读写都容错，取不到就当没勾过
+  var boxes = document.querySelectorAll('#check input');
+  function load(){
+    try{
+      var s = JSON.parse(localStorage.getItem('demoprep') || '{}');
+      boxes.forEach(function(b){ b.checked = !!s[b.dataset.k]; });
+    }catch(e){}
+  }
+  function save(){
+    try{
+      var s = {};
+      boxes.forEach(function(b){ if(b.checked) s[b.dataset.k] = 1; });
+      localStorage.setItem('demoprep', JSON.stringify(s));
+    }catch(e){}
+  }
+  load();
+  boxes.forEach(function(b){ b.addEventListener('change', save); });
+  document.getElementById('reset').addEventListener('click', function(){
+    boxes.forEach(function(b){ b.checked = false; });
+    save();
+  });
+
+  // 侧边导航跟随阅读位置
+  var links = Array.prototype.slice.call(document.querySelectorAll('#rail a'));
+  var secs = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      var i = secs.indexOf(en.target);
+      if(i < 0) return;
+      links.forEach(function(l){ l.classList.remove('on'); });
+      links[i].classList.add('on');
+    });
+  }, {rootMargin:'-15% 0px -70% 0px'});
+  secs.forEach(function(s){ if(s) io.observe(s); });
+})();
+</script>

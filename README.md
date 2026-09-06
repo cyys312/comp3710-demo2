@@ -35,6 +35,7 @@ comp3710/
 ├── AI_PROMPTS.md               # AI 使用记录（评分标准要求）
 ├── DEMO_PREP.md                # 演示准备：预期问题与答法
 ├── CODE_WALKTHROUGH.md         # 代码讲解：每个文件在干嘛、逐块拆解
+├── docs/demo_handbook.html     # 上面两份的合并版，浏览器打开即用
 ├── requirements.txt
 └── README.md
 ```

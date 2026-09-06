@@ -1,5 +1,9 @@
 # 代码讲解 — 每个文件在干嘛
 
+> **在线合并版（推荐）**：<https://claude.ai/code/artifact/2b865fba-d70b-4ef0-8081-dc3f70640469>
+> 每个 Part 下并排放问答与代码讲解，代码带语法高亮、侧栏可跳转、检查清单可勾选。
+> 离线副本：[`docs/demo_handbook.html`](docs/demo_handbook.html)，双击即可用浏览器打开。
+
 > 配套 [`DEMO_PREP.md`](DEMO_PREP.md) 使用。
 > 那份是「被问到 X 怎么答」，这份是「老师指着代码问『这段在干嘛』怎么答」。
 >
