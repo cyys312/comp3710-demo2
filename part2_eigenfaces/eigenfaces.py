@@ -86,13 +86,48 @@ def plot_compactness(S):
     return fig
 
 
+def plot_reconstruction_progression(mean, components, target, h, w, path):
+    """Rebuild one face from the mean plus an increasing number of eigenfaces.
+
+    This is the clearest way to see what an eigenface is: the top row is the running
+    reconstruction, the bottom row is the single eigenface added at that step. The first few
+    components turn out to adjust overall illumination rather than facial structure, which is
+    why the reconstruction barely changes until k is about 5.
+    """
+    ks = [0, 1, 2, 3, 5, 8, 15, 30, 60, len(components)]
+    coefficients = (target - mean) @ components.T
+
+    fig, axes = plt.subplots(2, len(ks) + 1, figsize=(1.3 * (len(ks) + 1), 3.6))
+    for col, k in enumerate(ks):
+        recon = mean + components[:k].T @ coefficients[:k] if k else mean.copy()
+        axes[0, col].imshow(recon.reshape(h, w), cmap=plt.cm.gray)
+        axes[0, col].set_title(f"k = {k}" if k else "mean face", fontsize=8)
+        if k:
+            axes[1, col].imshow(components[k - 1].reshape(h, w), cmap=plt.cm.gray)
+            axes[1, col].set_title(f"eigenface #{k}", fontsize=7, color="0.45")
+        else:
+            axes[1, col].axis("off")
+    axes[0, -1].imshow(target.reshape(h, w), cmap=plt.cm.gray)
+    axes[0, -1].set_title("original", fontsize=8, color="C3")
+    axes[1, -1].axis("off")
+    for ax in axes.ravel():
+        ax.set_xticks(())
+        ax.set_yticks(())
+    axes[0, 0].set_ylabel("reconstruction", fontsize=8)
+    fig.suptitle("Top: mean face + weighted sum of the first k eigenfaces      "
+                 "Bottom: the k-th eigenface on its own", fontsize=9)
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
+    fig.savefig(path, dpi=155, bbox_inches="tight")
+    print("saved:", path)
+
+
 def main():
     X, y, target_names, h, w = load_lfw()
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.25, random_state=RANDOM_STATE, stratify=y
     )
 
-    components, S, X_train_pca, X_test_pca, _ = compute_pca(X_train, X_test)
+    components, S, X_train_pca, X_test_pca, mean = compute_pca(X_train, X_test)
     eigenfaces = components.reshape((N_COMPONENTS, h, w))
     print("Projected shapes:", X_train_pca.shape, X_test_pca.shape)
 
@@ -100,6 +135,9 @@ def main():
     plot_gallery(eigenfaces, [f"eigenface {i}" for i in range(len(eigenfaces))], h, w) \
         .savefig(OUTDIR / "eigenfaces.png", dpi=120)
     plot_compactness(S).savefig(OUTDIR / "compactness.png", dpi=120)
+    # X_test still holds the raw (not mean-centred) test images, so row 3 is a real face
+    plot_reconstruction_progression(mean, components, X_test[3], h, w,
+                                    OUTDIR / "reconstruction_progression.png")
 
     clf = RandomForestClassifier(n_estimators=150, random_state=RANDOM_STATE, n_jobs=-1)
     clf.fit(X_train_pca, y_train)
