@@ -21,6 +21,7 @@ comp3710/
 │   └── eigenfaces.py
 ├── part3_cnn/                  # Part 3 — CNN (5 marks)
 │   ├── cnn_lfw.py              #   3.1 LFW face CNN classifier (1 mark)
+│   ├── ablation_mlp.py         #       control: is the convolution needed?
 │   └── dawnbench/              #   3.2 DAWNBench: ResNet-18 + CIFAR-10 (4 marks)
 │       ├── modules.py          #       Model definitions
 │       ├── dataset.py          #       Data loading and augmentation
@@ -86,6 +87,7 @@ and `keras_png_slices_seg_{train,validate,test}` (segmentation labels).
 python part1_dft/dft.py
 python part2_eigenfaces/eigenfaces.py
 python part3_cnn/cnn_lfw.py
+python part3_cnn/ablation_mlp.py            # CNN vs plain fully connected
 python part3_cnn/dawnbench/train.py --epochs 30
 python recognition/vae_oasis/train.py
 python recognition/unet_oasis/train.py

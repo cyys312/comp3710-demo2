@@ -612,6 +612,21 @@ def naive_dft(x):
     <p>也要<b>诚实说出代价</b>：CNN 需要更多数据和算力，可解释性差；eigenfaces 可以直接画出来看，卷积核不行。</p>
   </div>
 
+  <div class="volunteer">
+    <div class="q-tag">主动甩数据 · 我自己做的对照</div>
+    <p>「卷积是全连接的特例，那全连接参数更多不是更强？」—— 这个反驳我实测过（<code>ablation_mlp.py</code>，三个种子取均值）：</p>
+    <div class="tw"><table>
+      <thead><tr><th>模型</th><th class="num">参数量</th><th class="num">训练准确率</th><th class="num">测试准确率</th></tr></thead>
+      <tbody>
+        <tr><td>CNN（两层卷积）</td><td class="num">0.45 M</td><td class="num">0.9862</td><td class="num win">0.8696</td></tr>
+        <tr><td>MLP hidden=128</td><td class="num">0.25 M</td><td class="num">0.4110</td><td class="num">0.4130</td></tr>
+        <tr><td>MLP hidden=256</td><td class="num">0.51 M</td><td class="num">0.5007</td><td class="num">0.5155</td></tr>
+        <tr><td>MLP hidden=1024</td><td class="num">2.03 M</td><td class="num">0.5407</td><td class="num">0.5631</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>参数给到 4.5 倍仍落后 30.6 个百分点，而且训练集都没拟合上</b> —— 所以是欠拟合不是过拟合，差距在<b>归纳偏置</b>而非容量。另外 MLP hidden=128 三个种子精确落在 <b>0.4130</b>，正是 Part 2 的多数类基线，和随机森林是同一个失败模式。</p>
+  </div>
+
   <div class="q follow">
     <div class="q-tag">追问</div>
     <p class="q-ask">为什么用类别索引而不是 one-hot？</p>
