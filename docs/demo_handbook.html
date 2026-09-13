@@ -383,12 +383,12 @@ def sync(device: torch.device) -&gt; None:
 
 
   <div class="tw"><table>
-    <thead><tr><th>实现</th><th class="num">N=1024</th><th class="num">N=2048</th><th class="num">N=4096</th><th>复杂度</th></tr></thead>
+    <thead><tr><th>实现</th><th class="num">N=256</th><th class="num">N=512</th><th class="num">N=1024</th><th class="num">N=2048</th><th class="num">N=4096</th><th>复杂度</th></tr></thead>
     <tbody>
-      <tr><td>NumPy 朴素 DFT</td><td class="num">0.009265</td><td class="num">0.037120</td><td class="num">0.146261</td><td>O(N²)</td></tr>
-      <tr><td>PyTorch 朴素 DFT（GPU）</td><td class="num">0.002785</td><td class="num">0.006693</td><td class="num">0.010211</td><td>O(N²)</td></tr>
-      <tr><td>NumPy FFT</td><td class="num win">0.000006</td><td class="num win">0.000011</td><td class="num win">0.000019</td><td>O(N log N)</td></tr>
-      <tr><td>PyTorch FFT（GPU）</td><td class="num">0.000269</td><td class="num">0.000236</td><td class="num">0.000374</td><td>O(N log N)</td></tr>
+      <tr><td>NumPy 朴素 DFT</td><td class="num">0.000572</td><td class="num">0.002238</td><td class="num">0.009335</td><td class="num">0.037196</td><td class="num">0.145681</td><td>O(N²)</td></tr>
+      <tr><td>PyTorch 朴素 DFT（MPS）</td><td class="num">0.000587</td><td class="num">0.000835</td><td class="num">0.001576</td><td class="num">0.006524</td><td class="num">0.010210</td><td>O(N²)</td></tr>
+      <tr><td>NumPy FFT</td><td class="num win">0.000003</td><td class="num win">0.000004</td><td class="num win">0.000006</td><td class="num win">0.000011</td><td class="num win">0.000018</td><td>O(N log N)</td></tr>
+      <tr><td>PyTorch FFT（MPS）</td><td class="num">0.000418</td><td class="num">0.000206</td><td class="num">0.000212</td><td class="num">0.000224</td><td class="num">0.000175</td><td>O(N log N)</td></tr>
     </tbody>
   </table></div>
 
@@ -398,9 +398,10 @@ def sync(device: torch.device) -&gt; None:
     <div class="q-tag">必答</div>
     <p class="q-ask">为什么最快的方法最快？</p>
     <ol>
-      <li><b>FFT 快是因为算法，不是硬件。</b>看朴素 DFT 那一行：N 每翻一倍，耗时约 ×4（0.0093 → 0.037 → 0.146），正是 O(N²) 的特征；FFT 增长不到 2 倍。FFT 靠分治 —— 把 N 点 DFT 递归拆成两个 N/2 点，复用旋转因子的对称性 <span class="mono">W<sub>N</sub><sup>k+N/2</sup> = −W<sub>N</sub><sup>k</sup></span>，把 N² 次复数乘降到 N log N 次。</li>
+      <li><b>FFT 快是因为算法，不是硬件。</b>看朴素 DFT 那一行：N 每翻一倍，耗时约 ×4（0.009335 → 0.037196 → 0.145681，比值 3.99 和 3.92），正是 O(N²) 的特征；FFT 增长不到 2 倍。FFT 靠分治 —— 把 N 点 DFT 递归拆成两个 N/2 点，复用旋转因子的对称性 <span class="mono">W<sub>N</sub><sup>k+N/2</sup> = −W<sub>N</sub><sup>k</sup></span>，把 N² 次复数乘降到 N log N 次。</li>
       <li><b>GPU 让朴素 DFT 快一个数量级，但改不了复杂度。</b>N=4096 时 GPU 版比 CPU 版快 14 倍，因为 N² 次乘加被摊到数千核心上；但它仍是 O(N²)，N 再翻几倍照样输给 CPU 上的 FFT。<b>并行度只能改善常数因子，不能改善复杂度。</b></li>
-      <li><b>GPU 的 FFT 反而不如 NumPy 的</b>，因为这个规模下每次 kernel 启动的固定开销（约 0.25 ms）已超过计算本身。注意 Torch FFT 那一行从 N=1024 到 4096 几乎不变 —— 测的全是启动开销。</li>
+      <li><b>GPU 的 FFT 反而不如 NumPy 的</b>，因为这个规模下每次 kernel 启动的固定开销（约 0.2 ms 的下限）已超过计算本身。注意 Torch FFT 那一行从 N=512 到 4096 几乎不变 —— 测的全是启动开销。</li>
+      <li><b>N 小的时候排序会翻转。</b>N=256 时 GPU 上的朴素 DFT 是四者中<b>最慢</b>的（0.59 ms，甚至输给 CPU 版的 0.57 ms）—— 搬运和启动的开销比它要加速的 256² 次运算还贵，要到 N=512 才反超。这正是任务书让你「改变数据规模」的用意。笔记本上单个数字会浮动 10–30%，稳定的是<b>排序</b>和<b>斜率</b>。</li>
     </ol>
   </div>
 

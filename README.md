@@ -12,7 +12,7 @@ This repository contains the implementations of the four parts of COMP3710 Lab 2
 ## Repository layout
 
 ```
-comp3710/
+comp3710-demo2/
 ├── data/                       # Datasets (not in git), see "Data" below
 ├── docs/                       # Task sheet and marking rubric PDFs
 ├── part1_dft/                  # Part 1 — Discrete Fourier Transform (1 mark)
@@ -144,33 +144,75 @@ Every number here was measured; the commands and logs are in the per-directory R
 | Part 4 Task 2 — UNet segmentation | — | test **mean DSC 0.9774**, all four classes > 0.9 | Done |
 | Part 4 Task 3 — GAN | — | test diversity **88 %** of real data, no mode collapse | Done |
 
-### Part 1 — runtime of the four DFT implementations (seconds, best of 3 runs)
+### Part 1 — runtime of the four DFT implementations
 
-| Implementation | N=1024 | N=2048 | N=4096 | Complexity |
-|---|---|---|---|---|
-| NumPy naive DFT (matrix form) | 0.009265 | 0.037120 | 0.146261 | O(N²) |
-| PyTorch naive DFT (GPU) | 0.002785 | 0.006693 | 0.010211 | O(N²) |
-| NumPy FFT | 0.000006 | 0.000011 | 0.000019 | O(N log N) |
-| PyTorch FFT (GPU) | 0.000269 | 0.000236 | 0.000374 | O(N log N) |
+Measured on Apple MPS (local machine), best of 3 runs per size. The raw console output of this
+exact run is kept at [`part1_dft/outputs/part1_run.log`](part1_dft/outputs/part1_run.log), and
+[`part1_dft/outputs/dft_timing.png`](part1_dft/outputs/dft_timing.png) plots the same data —
+the table, the figure and the log all come from one invocation of
+`python part1_dft/dft.py --sizes 256 512 1024 2048 4096`.
 
-Ranking (fast → slow): **NumPy FFT < PyTorch FFT(GPU) < PyTorch naive DFT(GPU) < NumPy naive DFT**.
+| Implementation | N=256 | N=512 | N=1024 | N=2048 | N=4096 | Complexity |
+|---|---|---|---|---|---|---|
+| NumPy naive DFT (matrix form) | 0.000572 | 0.002238 | 0.009335 | 0.037196 | 0.145681 | O(N²) |
+| PyTorch naive DFT (MPS) | 0.000587 | 0.000835 | 0.001576 | 0.006524 | 0.010210 | O(N²) |
+| NumPy FFT | 0.000003 | 0.000004 | 0.000006 | 0.000011 | 0.000018 | O(N log N) |
+| PyTorch FFT (MPS) | 0.000418 | 0.000206 | 0.000212 | 0.000224 | 0.000175 | O(N log N) |
 
-Three points worth drawing out:
+Ranking at N=4096 (fast → slow): **NumPy FFT < PyTorch FFT(MPS) < PyTorch naive DFT(MPS) <
+NumPy naive DFT**. The script prints this ranking line for every N, because the order is not the
+same at every size — see point 4.
 
-1. **The FFT wins because of the algorithm, not the hardware**. Every doubling of N multiplies the
-   naive DFT runtime by roughly 4 (0.0093 → 0.037 → 0.146, exactly O(N²)), while the FFT grows by
-   less than 2. No number of parallel cores makes up for a gap in asymptotic complexity.
-2. **The GPU buys the naive DFT an order of magnitude but not a better complexity**. At N=4096 the
-   GPU version is 14x faster than the CPU one (0.0102 vs 0.1463) because the N² multiply-adds are
-   spread across thousands of cores; it is still O(N²), and a few more doublings of N will lose to
-   an FFT running on the CPU.
-3. **The GPU FFT is in fact slower than NumPy's**, because at this size the fixed cost of each
-   kernel launch (about 0.25 ms) already exceeds the computation itself. A GPU only pays off once
-   there is enough work to amortise that.
+Four points worth drawing out:
 
-One more note: at the same O(N²), NumPy's matrix form is about 25x faster than the textbook double
-Python loop (0.0023 s vs 0.0581 s at N=512) — **complexity and constant factors are two different
+1. **The FFT wins because of the algorithm, not the hardware.** Every doubling of N multiplies the
+   naive DFT runtime by almost exactly 4 (0.009335 → 0.037196 → 0.145681, ratios 3.99 and 3.92 —
+   textbook O(N²)), while the FFT grows by less than 2. No number of parallel cores makes up for a
+   gap in asymptotic complexity.
+2. **The GPU buys the naive DFT an order of magnitude but not a better complexity.** At N=4096 the
+   GPU version is 14x faster than the CPU one (0.010210 vs 0.145681) because the N² multiply-adds
+   are spread across many cores; it is still O(N²), and a few more doublings of N will lose to an
+   FFT running on the CPU.
+3. **The GPU FFT is in fact slower than NumPy's** at every size measured, because the fixed cost of
+   a kernel launch (a floor of about 0.2 ms, visible in the almost flat N=512..4096 row) already
+   exceeds the computation itself. A GPU only pays off once there is enough work to amortise that.
+4. **At small N the ranking inverts.** At N=256 the naive DFT *on the GPU* is the slowest of all
+   four (0.59 ms, behind even the CPU version at 0.57 ms): the transfer and launch overhead costs
+   more than the whole 256² of arithmetic it was meant to accelerate. The GPU only overtakes the
+   CPU from N=512 on. The asymptotics take over only once N is large enough for the work to
+   dominate — which is exactly what the task sheet's "change the size of the data" step exposes.
+
+A caveat worth stating at the demo: these are laptop measurements, and individual entries move by
+10–30 % between runs. What is stable, and what the argument rests on, is the *ordering* and the
+*slopes* — not the third decimal place of any one number.
+
+One more note: at the same O(N²), NumPy's matrix form is about 24x faster than the textbook double
+Python loop (0.002400 s vs 0.0585 s at N=512) — **complexity and constant factors are two different
 things**.
+
+### Part 1 — DFT components vs the coefficients used to build the wave
+
+`square_wave_fourier` gives harmonic n the coefficient 4/(nπ), so the DFT can be checked against
+the values actually used to synthesise the signal rather than against another FFT implementation:
+
+| harmonic n | measured | 4/(nπ) | rel. error |
+|---|---|---|---|
+| 1 | 1.273240 | 1.273240 | 0.00e+00 |
+| 3 | 0.424413 | 0.424413 | 1.31e-16 |
+| 5 | 0.254648 | 0.254648 | 4.36e-16 |
+| 7 | 0.181891 | 0.181891 | 4.58e-16 |
+| 9 | 0.141471 | 0.141471 | 5.89e-16 |
+| 11 | 0.115749 | 0.115749 | 1.32e-15 |
+
+They agree to machine precision, and the two *empty* places in the spectrum are the interesting part:
+
+- **even bin n=2 → 5.7e-18.** A square wave is half-wave symmetric, so the even harmonics cancel.
+- **first missing odd bin n=101 → 8.8e-17.** Only 50 harmonics were synthesised, so there is nothing
+  above n=99. A true square wave would carry energy there for ever — this is precisely the
+  difference between the reconstruction and the thing it approximates.
+
+Agreement is this exact only because T=1 s and f0=1 Hz place every harmonic on a bin centre, so
+there is no spectral leakage. Shift f0 off an integer and each line smears into its neighbours.
 
 ### Outstanding
 

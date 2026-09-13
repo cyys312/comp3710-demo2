@@ -6,7 +6,7 @@ keras_png_slices_data/
 
 # Training artefacts: weights are too large to commit, but the result figures are kept —
 # they are the evidence shown at the demo and the source of the tables in the READMEs
-# (well under 1 MB in total).
+# (about 21 MB in total).
 checkpoints/
 runs/
 *.pth
@@ -24,6 +24,7 @@ env/
 *.egg-info/
 
 # Editors and OS
+.Rhistory
 .vscode/
 .idea/
 .DS_Store

@@ -1,0 +1,45 @@
+PyTorch 2.13.0 | device = mps
+Saved: /Users/cwy/comp3710/part1_dft/outputs/square_wave_reconstruction.png
+
+--- NumPy vs PyTorch implementation agreement ---
+square_wave         max deviation: 0.000e+00
+square_wave_fourier max deviation: 1.089e-05
+naive_dft(NumPy, complex128) vs np.fft.fft: relative error 3.04e-13  allclose=True
+naive_dft(GPU,  complex64)  vs np.fft.fft: relative error 1.78e-04  (unavoidable when accumulating N terms in single precision, still within the ~1e-7*sqrt(N) float32 range)
+
+--- DFT components vs the coefficients used to build the wave ---
+ harmonic n     measured     4/(n*pi)   rel. error
+          1     1.273240     1.273240     0.00e+00
+          3     0.424413     0.424413     1.31e-16
+          5     0.254648     0.254648     4.36e-16
+          7     0.181891     0.181891     4.58e-16
+          9     0.141471     0.141471     5.89e-16
+         11     0.115749     0.115749     1.32e-15
+
+even bin n=2            : 5.731e-18  (zero: a square wave is half-wave symmetric, so even harmonics cancel)
+first missing odd n=101 : 8.831e-17  (zero: only 50 harmonics were synthesised, so there is nothing above n=99;
+                          a true square wave would carry energy here for ever)
+Amplitudes agree to machine precision because T=1 s and f0=1 Hz put every harmonic
+exactly on a bin centre, so there is no spectral leakage. Move f0 off an integer and
+each line smears into its neighbours instead.
+Saved: /Users/cwy/comp3710/part1_dft/outputs/dft_spectrum.png
+
+--- Same O(N^2), different implementations (N=512) ---
+Nested Python loops : 0.0585 s
+NumPy matrix form   : 0.002400 s  (24x faster)
+Results agree       : True
+
+--- DFT timing comparison (seconds, best of 3) ---
+                       N=256         N=512         N=1024        N=2048        N=4096        
+NumPy naive DFT        0.000572      0.002238      0.009335      0.037196      0.145681      
+Torch naive DFT (mps)  0.000587      0.000835      0.001576      0.006524      0.010210      
+NumPy FFT              0.000003      0.000004      0.000006      0.000011      0.000018      
+Torch FFT (mps)        0.000418      0.000206      0.000212      0.000224      0.000175      
+
+--- Ranking from fastest to slowest for each N ---
+N=256    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.42 ms)  <  NumPy naive DFT (0.57 ms)  <  Torch naive DFT (mps) (0.59 ms)
+N=512    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.21 ms)  <  Torch naive DFT (mps) (0.84 ms)  <  NumPy naive DFT (2.24 ms)
+N=1024   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.21 ms)  <  Torch naive DFT (mps) (1.58 ms)  <  NumPy naive DFT (9.34 ms)
+N=2048   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.22 ms)  <  Torch naive DFT (mps) (6.52 ms)  <  NumPy naive DFT (37.20 ms)
+N=4096   NumPy FFT (0.02 ms)  <  Torch FFT (mps) (0.17 ms)  <  Torch naive DFT (mps) (10.21 ms)  <  NumPy naive DFT (145.68 ms)
+Saved: /Users/cwy/comp3710/part1_dft/outputs/dft_timing.png

@@ -231,7 +231,7 @@ def plot_spectrum(t, signal, dft_result, n_samples, path):
     ax1.grid(True)
 
     ax2.stem(xf[:60], magnitude[:60], basefmt=" ")
-    for k in range(1, 12, 2):        # mark where the first few odd harmonics sit
+    for k in range(1, 60, 2):        # mark every odd harmonic inside the plotted range
         ax2.axvline(k * F0, color="r", ls="--", alpha=0.4)
     ax2.set_title("Frequency domain: naive DFT magnitude (odd harmonics only)")
     ax2.set_xlabel("Frequency [Hz]")
@@ -240,6 +240,34 @@ def plot_spectrum(t, signal, dft_result, n_samples, path):
     fig.tight_layout()
     fig.savefig(path, dpi=120)
     print("Saved:", path)
+
+
+def compare_components(dft_result, n_samples, n_harmonics, top=6):
+    """Answer the task sheet's "compare the frequency components obtained from the DFT with
+    those originally used to construct the square wave. Do you notice any differences?"
+
+    square_wave_fourier gives harmonic n the coefficient 4/(n*pi), so the analytic amplitudes
+    are known exactly and the DFT can be checked against them rather than against another FFT.
+    With T = 1 s the frequency resolution is 1 Hz, so harmonic n lands in bin n exactly.
+    """
+    magnitude = 2.0 / n_samples * np.abs(dft_result)
+    print("\n--- DFT components vs the coefficients used to build the wave ---")
+    print(f"{'harmonic n':>11}{'measured':>13}{'4/(n*pi)':>13}{'rel. error':>13}")
+    for n in range(1, 2 * top, 2):
+        ideal = 4.0 / (np.pi * n)
+        print(f"{n:>11}{magnitude[n]:>13.6f}{ideal:>13.6f}"
+              f"{abs(magnitude[n] - ideal) / ideal:>13.2e}")
+
+    # The two interesting places where the spectrum is *empty*, and why.
+    last = 2 * n_harmonics - 1                    # highest harmonic actually synthesised
+    print(f"\neven bin n=2            : {magnitude[2]:.3e}  (zero: a square wave is half-wave "
+          f"symmetric, so even harmonics cancel)")
+    print(f"first missing odd n={last + 2:<4}: {magnitude[last + 2]:.3e}  (zero: only {n_harmonics} "
+          f"harmonics were synthesised, so there is nothing above n={last};")
+    print(f"{'':26}a true square wave would carry energy here for ever)")
+    print("Amplitudes agree to machine precision because T=1 s and f0=1 Hz put every harmonic\n"
+          "exactly on a bin centre, so there is no spectral leakage. Move f0 off an integer and\n"
+          "each line smears into its neighbours instead.")
 
 
 def plot_timings(sizes, results, path):
@@ -302,6 +330,7 @@ def main():
           f"(unavoidable when accumulating N terms in single precision, still within the "
           f"~1e-7*sqrt(N) float32 range)")
 
+    compare_components(dft_np, N_DEFAULT, 50)
     plot_spectrum(t, sig_np, dft_np, N_DEFAULT, OUTDIR / "dft_spectrum.png")
 
     # ---- (c) how slow the double-loop version really is ----

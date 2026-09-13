@@ -110,7 +110,15 @@ def main():
     y_pred, y_true = evaluate(model, test_loader)
     print("\n--- CNN on LFW ---")
     print(classification_report(y_true, y_pred, target_names=target_names))
-    # TODO: compare F1 against the Part 2 random forest, and explain in the demo why the CNN wins
+    # The task sheet asks for a CNN that "should hopefully out perform" the Part 2 eigenfaces
+    # pipeline, so the comparison is printed here rather than left to the reader. The Part 2
+    # figures come from part2_eigenfaces/eigenfaces.py on the same split and the same seed.
+    accuracy = (y_pred == y_true).mean()
+    print("--- accuracy against the Part 2 pipeline, same split ---")
+    print(f"{'Part 2 majority-class baseline':<34}{0.4130:>10.4f}")
+    print(f"{'Part 2 PCA + random forest':<34}{0.5776:>10.4f}")
+    print(f"{'Part 2 with class_weight=balanced':<34}{0.7298:>10.4f}")
+    print(f"{'Part 3.1 CNN (this file)':<34}{accuracy:>10.4f}")
 
 
 if __name__ == "__main__":
