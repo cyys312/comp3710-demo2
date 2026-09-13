@@ -25,7 +25,12 @@ env/
 
 # Editors and OS
 .Rhistory
-.vscode/
+# .vscode is ignored except the project-level files that document how to run this
+# repository: the tasks are the demo runbook, and they should travel with the code.
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 .DS_Store
 

@@ -1,0 +1,25 @@
+{
+  // Use the project virtualenv for every run and for Pylance's analysis.
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+
+  // Unbuffered stdout. Without this, Python block-buffers when its output is a pipe,
+  // and a long training run looks frozen for minutes at a time.
+  "terminal.integrated.env.osx": { "PYTHONUNBUFFERED": "1" },
+  "terminal.integrated.env.linux": { "PYTHONUNBUFFERED": "1" },
+
+  // Each task directory is self-contained and imports its siblings by plain module name
+  // (cnn_lfw, modules, dataset), so Pylance needs them all on the path.
+  "python.analysis.extraPaths": [
+    "part1_dft", "part2_eigenfaces", "part3_cnn", "part3_cnn/dawnbench",
+    "recognition/vae_oasis", "recognition/unet_oasis", "recognition/gan_oasis"
+  ],
+
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.DS_Store": true,
+    "data": true
+  },
+  "files.trimTrailingWhitespace": true,
+  "editor.rulers": [98]
+}

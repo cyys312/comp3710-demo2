@@ -1,0 +1,92 @@
+{
+  // Demo tasks. Run with Cmd+Shift+P -> "Tasks: Run Task", or bind a key to
+  // workbench.action.tasks.runTask. Picking from a list beats typing a command
+  // in front of an examiner: the two live Rangpur runs below are worth marks,
+  // and a typo in an sbatch path costs time you do not have.
+  //
+  // The numbered tasks follow the demo run sheet. Everything else is on demand.
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": { "PYTHONUNBUFFERED": "1" }
+  },
+  "presentation": { "echo": true, "reveal": "always", "panel": "dedicated", "clear": true },
+  "problemMatcher": [],
+
+  "tasks": [
+    {
+      // Task sheet, Part 3.2 item 2: inference AND one epoch of training must run on
+      // Rangpur during the demonstration. Task 2 likewise requires live test-set inference.
+      // Submit both first so they queue while the talking happens.
+      "label": "1 · Rangpur: submit both live jobs",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch slurm/demo_dawnbench.slurm && sbatch --export=ALL,ONLY=unet slurm/predict.slurm && squeue -u \\$USER'\""
+    },
+    {
+      // The second job usually shows PD (Resources) until the first releases the A100.
+      // That is normal scheduling, not a failure.
+      "label": "2 · Rangpur: queue status",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'squeue -u \\$USER'\""
+    },
+    {
+      // Globs rather than job ids: the two jobs get consecutive numbers and it is
+      // easy to pair the wrong id with the wrong file.
+      "label": "3 · Rangpur: read DAWNBench output",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && tail -40 \\$(ls -t logs/demo-dawnbench-*.out | head -1)'\""
+    },
+    {
+      "label": "4 · Rangpur: read UNet test DSC",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && tail -20 \\$(ls -t logs/predict-*.out | head -1)'\""
+    },
+
+    {
+      "label": "Part 1 · DFT timing sweep + spectrum",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python part1_dft/dft.py --sizes 256 512 1024 2048 4096"
+    },
+    {
+      "label": "Part 2 · Eigenfaces + random forest",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python part2_eigenfaces/eigenfaces.py"
+    },
+    {
+      "label": "Part 3.1 · CNN on LFW",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python part3_cnn/cnn_lfw.py"
+    },
+    {
+      // The control experiment: an MLP with far more parameters does worse, and cannot
+      // even fit the training set. Worth volunteering rather than waiting to be asked.
+      "label": "Part 3.1 · CNN vs MLP ablation",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python part3_cnn/ablation_mlp.py --seeds 3",
+      "options": { "cwd": "${workspaceFolder}/part3_cnn" }
+    },
+    {
+      // Local inference only. The mark for Part 3.2 requires the Rangpur run above;
+      // this is the fallback if the cluster is unreachable mid-demo.
+      "label": "Part 3.2 · DAWNBench inference (local fallback)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python part3_cnn/dawnbench/predict.py --loader cpu"
+    },
+
+    {
+      "label": "Task 1 · VAE manifold (z=2)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python recognition/vae_oasis/predict.py --mode all --ckpt recognition/vae_oasis/checkpoints/vae_z2.pth"
+    },
+    {
+      "label": "Task 2 · UNet test-set inference",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python recognition/unet_oasis/predict.py --n-show 4"
+    },
+    {
+      "label": "Task 3 · GAN samples + diversity score",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python recognition/gan_oasis/predict.py --n 64"
+    }
+  ]
+}
