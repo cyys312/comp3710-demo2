@@ -2,8 +2,11 @@
 # Shared environment setup for Rangpur jobs; sourced by each of the .slurm scripts.
 #
 # Measured on the cluster (2026-09-02, cross-checked against sinfo / module avail):
-#   * Use the a100 partition (10 x A100-PCIE-40GB). The course-specific comp3710
-#     partition is stuck in PENDING(PartitionConfig) for everyone and is unusable.
+#   * Submit to comp3710,a100 with --account=comp3710. comp3710 sets
+#     AllowAccounts=comp3710, but the default account for this login is the personal
+#     one, so a job submitted without --account is rejected as PENDING(PartitionConfig).
+#     That reason code reads like a misconfigured partition and is really an account
+#     mismatch. Naming both partitions lets Slurm pick whichever can start first.
 #   * Never write --mem: the nodes report RealMemory=1, so a job carrying --mem is
 #     never scheduled.
 #   * torch lives in the conda environment named torch (2.13.0+cu130) and ships its

@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=predict
-#SBATCH --partition=a100
+#SBATCH --partition=comp3710,a100
+#SBATCH --account=comp3710
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=00:20:00

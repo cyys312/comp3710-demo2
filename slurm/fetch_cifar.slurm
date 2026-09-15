@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=fetch-cifar
 #SBATCH --partition=cpu
+#SBATCH --account=comp3710
 #SBATCH --cpus-per-task=2
 #SBATCH --time=02:00:00
 #SBATCH --output=logs/fetch-cifar-%j.out

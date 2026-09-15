@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=unet-oasis
-#SBATCH --partition=a100
+#SBATCH --partition=comp3710,a100
+#SBATCH --account=comp3710
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=04:00:00
@@ -13,9 +14,12 @@
 
 # Measured on the cluster (2026-09-02) — three points differ from the usual recipe, and
 # copying a template off the web will fail on every one of them:
-#   1. Use the a100 partition (AllowAccounts=ALL). On the course-specific comp3710
-#      partition every job currently sits in PENDING(PartitionConfig); the account
-#      associations have not been set up yet.
+#   1. Submit to comp3710,a100 with --account=comp3710. The course partition sets
+#      AllowAccounts=comp3710 while the default account for this login is the personal
+#      one (s4984244), so without --account every job is rejected with
+#      PENDING(PartitionConfig) — which reads like a broken partition but is not.
+#      Listing both partitions lets Slurm start the job wherever a GPU frees up first;
+#      a100 is often fully held by multi-day jobs, and comp3710 usually is not.
 #   2. **Do not write --mem**. Every a100 node reports RealMemory=1, so any
 #      --mem=<positive value> can never be satisfied and the job pends indefinitely.
 #   3. module load cuda is unnecessary: PyTorch 2.13+cu130 in the conda environment
