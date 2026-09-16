@@ -21,6 +21,14 @@
         "comp3710",
         "a100"
       ]
+    },
+    {
+      // Free text, for a partition that is not one of the three above — the demonstrator
+      // may name one this repository has never used. Task 2b lists what exists.
+      "id": "partitionFree",
+      "type": "promptString",
+      "description": "Partition name exactly as Slurm spells it (run task 2b to list them)",
+      "default": "a100-test"
     }
   ],
 
@@ -57,6 +65,19 @@
       "label": "1c · Rangpur: submit to a chosen partition",
       "type": "shell",
       "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch --partition=${input:partition} slurm/demo_dawnbench.slurm && sbatch --partition=${input:partition} --export=ALL,ONLY=unet slurm/predict.slurm && squeue -u \\$USER'\""
+    },
+    {
+      // Same as 1c but typed, for a partition outside the picker's list.
+      "label": "1d · Rangpur: submit to a partition I type",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch --partition=${input:partitionFree} slurm/demo_dawnbench.slurm && sbatch --partition=${input:partitionFree} --export=ALL,ONLY=unet slurm/predict.slurm && squeue -u \\$USER'\""
+    },
+    {
+      // What partitions exist, how busy each is, and whether its nodes have GPUs.
+      // Run this first if the demonstrator names one that is unfamiliar.
+      "label": "2b · Rangpur: list partitions and free nodes",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'sinfo -o \\\"%.16P %.7a %.11l %.6D %.9t %.22N %.16G\\\"'\""
     },
     {
       "label": "2 · Rangpur: queue status",
