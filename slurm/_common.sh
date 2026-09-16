@@ -2,6 +2,11 @@
 # Shared environment setup for Rangpur jobs; sourced by each of the .slurm scripts.
 #
 # Measured on the cluster (2026-09-02, cross-checked against sinfo / module avail):
+#   * Short jobs that must run live go to a100-test first. It has its own two nodes
+#     (a100-a, a100-b) rather than sharing the nine a100-0..9, AllowAccounts=ALL, and a
+#     10-minute default limit, so nothing can camp on it — measured 2 running / 1 pending
+#     while comp3710 had 2 running / 27 pending and the nine shared nodes were held by
+#     jobs with 2- and 6-day limits. Keep long training jobs off it for the same reason.
 #   * Submit to comp3710,a100 with --account=comp3710. comp3710 sets
 #     AllowAccounts=comp3710, but the default account for this login is the personal
 #     one, so a job submitted without --account is rejected as PENDING(PartitionConfig).

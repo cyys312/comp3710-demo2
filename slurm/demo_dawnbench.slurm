@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=demo-dawnbench
-#SBATCH --partition=comp3710,a100
+#SBATCH --partition=a100-test,comp3710,a100
 #SBATCH --account=comp3710
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=00:20:00
+#SBATCH --time=00:10:00
 #SBATCH --output=logs/demo-dawnbench-%j.out
 #SBATCH --error=logs/demo-dawnbench-%j.err
 
