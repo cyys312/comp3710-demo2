@@ -6,6 +6,24 @@
   //
   // The numbered tasks follow the demo run sheet. Everything else is on demand.
   "version": "2.0.0",
+
+  // Asked for by task 1c. If the demonstrator names a partition on the day, pick it here
+  // rather than retyping an sbatch line in front of them.
+  "inputs": [
+    {
+      "id": "partition",
+      "type": "pickString",
+      "description": "Which partition should these jobs go to?",
+      "default": "a100-test,comp3710,a100",
+      "options": [
+        "a100-test,comp3710,a100",
+        "a100-test",
+        "comp3710",
+        "a100"
+      ]
+    }
+  ],
+
   "options": {
     "cwd": "${workspaceFolder}",
     "env": { "PYTHONUNBUFFERED": "1" }
@@ -31,6 +49,14 @@
       "label": "1b · Rangpur: submit DAWNBench, full 30 epochs",
       "type": "shell",
       "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch --export=ALL,EPOCHS=30 slurm/demo_dawnbench.slurm && squeue -u \\$USER'\""
+    },
+    {
+      // Same two jobs as task 1, but with the partition chosen from a list. The account
+      // stays in the script: comp3710 sets AllowAccounts=comp3710, while a100 and
+      // a100-test both allow any account, so one setting is correct everywhere.
+      "label": "1c · Rangpur: submit to a chosen partition",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch --partition=${input:partition} slurm/demo_dawnbench.slurm && sbatch --partition=${input:partition} --export=ALL,ONLY=unet slurm/predict.slurm && squeue -u \\$USER'\""
     },
     {
       "label": "2 · Rangpur: queue status",
