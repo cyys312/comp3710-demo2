@@ -14,12 +14,15 @@
 #
 # This script covers both in one go: inference from a trained checkpoint, then training.
 #
-# The sheet only asks for a single epoch, but the full 30 take about 95 s, so the demo runs
-# all of them. That turns one run into evidence for all three of the Part 3.2 criteria:
-# the >90 % tier, the live-run tier, and the 94 %-under-360 s tier are all decided by
-# numbers produced in front of the demonstrator rather than quoted from the README.
-# train.py only prints the [1 mark] / [2 marks] verdict lines when epochs >= 10.
+# EPOCHS defaults to 1, which is what the sheet asks for and what the demonstrator asked
+# for. Submitting with EPOCHS=30 instead runs the real thing in about 95 s and makes
+# train.py print its [1 mark] / [2 marks] verdict lines, which it suppresses below ten
+# epochs so that a pipeline check cannot read as a failed task. Use that when there is
+# time, because it decides all three Part 3.2 criteria from numbers computed during the
+# demonstration rather than quoted from the README.
+#
 # Submit: sbatch slurm/demo_dawnbench.slurm
+#         sbatch --export=ALL,EPOCHS=30 slurm/demo_dawnbench.slurm
 
 cd "$SLURM_SUBMIT_DIR" || exit 1
 mkdir -p logs
@@ -32,10 +35,11 @@ python3 part3_cnn/dawnbench/predict.py \
     --ckpt part3_cnn/dawnbench/checkpoints/resnet18_cifar10.pth
 
 echo
-echo "########## 2/2  Training: 30 epochs from scratch, about 95 s ##########"
+EPOCHS="${EPOCHS:-1}"
+echo "########## 2/2  Training: ${EPOCHS} epoch(s) from scratch ##########"
 python3 part3_cnn/dawnbench/train.py \
     --data-root "$CIFAR_ROOT" \
-    --epochs 30 --batch-size 512 --no-save
+    --epochs "$EPOCHS" --batch-size 512 --no-save
 # --no-save still matters even now that the run is a full one. Saving triggers on
 # acc > best_acc with best_acc starting from 0, so a demo run that happened to land
 # slightly below the stored checkpoint would still replace it — and the inference step

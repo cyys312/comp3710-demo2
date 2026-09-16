@@ -25,6 +25,14 @@
     {
       // The second job usually shows PD (Resources) until the first releases the A100.
       // That is normal scheduling, not a failure.
+      // The demonstrator asked for one epoch, which is what task 1 submits. This variant
+      // runs the real 30 in about 95 s, which makes train.py print the [1 mark] / [2 marks]
+      // verdict lines it suppresses below ten epochs — useful when the queue is short.
+      "label": "1b · Rangpur: submit DAWNBench, full 30 epochs",
+      "type": "shell",
+      "command": "ssh rangpur \"bash -lc 'cd ~/comp3710-demo2 && sbatch --export=ALL,EPOCHS=30 slurm/demo_dawnbench.slurm && squeue -u \\$USER'\""
+    },
+    {
       "label": "2 · Rangpur: queue status",
       "type": "shell",
       "command": "ssh rangpur \"bash -lc 'squeue -u \\$USER'\""
