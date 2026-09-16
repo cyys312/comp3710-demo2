@@ -1,0 +1,63 @@
+==============================================
+job      : demo-dawnbench (592350)
+node     : a100-2
+python   : /home/Student/s4984244/miniconda3/envs/torch/bin/python3
+torch    : 2.13.0+cu130 | cuda: True
+NVIDIA A100-PCIE-40GB, 40960 MiB
+==============================================
+
+########## 1/2  Inference: load the trained checkpoint, evaluate on the test set ##########
+Loaded checkpoint: epoch 30, training acc 94.15%
+Test accuracy: 94.15%
+  airplane      94.1%
+  automobile    97.6%
+  bird          92.1%
+  cat           87.8%
+  deer          95.3%
+  dog           90.9%
+  frog          96.0%
+  horse         96.1%
+  ship          96.0%
+  truck         95.6%
+
+########## 2/2  Training: 30 epochs from scratch, about 95 s ##########
+device=cuda amp=True epochs=30 batch=512 loader=gpu steps/epoch=97
+  epoch 1 [ 20/97] loss 1.9922 | 363 ms/step
+  epoch 1 [ 40/97] loss 1.8452 | 191 ms/step
+  epoch 1 [ 60/97] loss 1.7546 | 134 ms/step
+  epoch 1 [ 80/97] loss 1.6881 | 105 ms/step
+  epoch 1 [ 97/97] loss 1.6410 | 90 ms/step
+epoch   1 | loss 1.6410 | test acc 49.25% | this epoch 8.8s | cumulative 10s
+epoch   2 | loss 1.2660 | test acc 66.78% | this epoch 1.9s | cumulative 12s
+epoch   3 | loss 1.0903 | test acc 74.61% | this epoch 1.9s | cumulative 14s
+epoch   4 | loss 0.9773 | test acc 77.10% | this epoch 1.9s | cumulative 17s
+epoch   5 | loss 0.9235 | test acc 66.48% | this epoch 1.9s | cumulative 19s
+epoch   6 | loss 0.8781 | test acc 66.17% | this epoch 1.9s | cumulative 21s
+epoch   7 | loss 0.8415 | test acc 81.06% | this epoch 1.9s | cumulative 23s
+epoch   8 | loss 0.8178 | test acc 76.01% | this epoch 1.9s | cumulative 25s
+epoch   9 | loss 0.7960 | test acc 79.81% | this epoch 1.9s | cumulative 28s
+epoch  10 | loss 0.7778 | test acc 76.31% | this epoch 1.9s | cumulative 30s
+epoch  11 | loss 0.7632 | test acc 79.66% | this epoch 1.9s | cumulative 32s
+epoch  12 | loss 0.7535 | test acc 81.38% | this epoch 1.9s | cumulative 34s
+epoch  13 | loss 0.7410 | test acc 84.55% | this epoch 1.9s | cumulative 36s
+epoch  14 | loss 0.7328 | test acc 82.74% | this epoch 1.9s | cumulative 39s
+epoch  15 | loss 0.7262 | test acc 84.12% | this epoch 1.9s | cumulative 41s
+epoch  16 | loss 0.7109 | test acc 86.10% | this epoch 1.9s | cumulative 43s
+epoch  17 | loss 0.7089 | test acc 86.90% | this epoch 1.9s | cumulative 45s
+epoch  18 | loss 0.6974 | test acc 87.84% | this epoch 1.9s | cumulative 47s
+epoch  19 | loss 0.6894 | test acc 87.12% | this epoch 1.9s | cumulative 49s
+epoch  20 | loss 0.6721 | test acc 88.92% | this epoch 1.9s | cumulative 52s
+epoch  21 | loss 0.6623 | test acc 89.32% | this epoch 1.9s | cumulative 54s
+epoch  22 | loss 0.6473 | test acc 89.50% | this epoch 1.9s | cumulative 56s
+epoch  23 | loss 0.6289 | test acc 88.07% | this epoch 1.9s | cumulative 58s
+epoch  24 | loss 0.6134 | test acc 91.23% | this epoch 1.9s | cumulative 60s
+epoch  25 | loss 0.5919 | test acc 91.93% | this epoch 1.9s | cumulative 63s
+epoch  26 | loss 0.5679 | test acc 92.07% | this epoch 1.9s | cumulative 65s
+epoch  27 | loss 0.5533 | test acc 92.81% | this epoch 1.9s | cumulative 67s
+epoch  28 | loss 0.5366 | test acc 93.75% | this epoch 1.9s | cumulative 69s
+epoch  29 | loss 0.5253 | test acc 93.99% | this epoch 1.9s | cumulative 71s
+epoch  30 | loss 0.5215 | test acc 94.08% | this epoch 1.9s | cumulative 74s
+
+Best accuracy 94.08%, total time 74 s (1.2 min)
+  [1 mark]  >90% and <30 min                 : met
+  [2 marks] >=94% and <=360 s (V100 baseline): met

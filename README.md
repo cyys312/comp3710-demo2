@@ -138,7 +138,7 @@ Every number here was measured; the commands and logs are in the per-directory R
 | Part 1 — DFT | 1 | timing comparison of four implementations, size sweep (table below) | Done |
 | Part 2 — Eigenfaces + random forest | 1 | accuracy 0.5776 (baseline 0.4130), 0.7298 weighted | Done |
 | Part 3.1 — LFW CNN | 1 | accuracy **0.8509**, clearly ahead of Part 2 | Done |
-| Part 3.2 — DAWNBench | 4 | **94.15 % / 95 s** (A100) | Done |
+| Part 3.2 — DAWNBench | 4 | **94.15 % / 95 s** (A100), reproduced at 94.08 % / 74 s | Done |
 | Part 4.1 — edX advanced Git short course | 1 | — | **Outstanding** |
 | Part 4 Task 1 — VAE + manifold | — | validation ELBO 4183.05, 2D manifold grid produced | Done |
 | Part 4 Task 2 — UNet segmentation | — | test **mean DSC 0.9774**, all four classes > 0.9 | Done |
@@ -213,6 +213,24 @@ They agree to machine precision, and the two *empty* places in the spectrum are 
 
 Agreement is this exact only because T=1 s and f0=1 Hz place every harmonic on a bin centre, so
 there is no spectral leakage. Shift f0 off an integer and each line smears into its neighbours.
+
+### Part 3.2 — the full run, reproduced
+
+Both figures come from real runs on the cluster, not from a single lucky one:
+
+| Run | Accuracy | Time | `[1 mark]` | `[2 marks]` |
+|---|---|---|---|---|
+| Job 581349 (original) | 94.15 % | 95 s | met | met |
+| Job 592350 (re-run) | 94.08 % | 74 s | met | met |
+
+The console output of the second is kept verbatim at
+[`part3_cnn/dawnbench/outputs/full_run_592350.log`](part3_cnn/dawnbench/outputs/full_run_592350.log),
+including the header that records the node, the torch build and the GPU, and the two verdict
+lines `train.py` prints against the task sheet's tiers.
+
+The ~0.07 point and ~20 second spread between the two runs is ordinary variation — different
+random initialisation, and a differently loaded node. **What matters is that both clear both
+thresholds**, so the result is a property of the method rather than of one run.
 
 ### Outstanding
 
