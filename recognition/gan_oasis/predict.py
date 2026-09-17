@@ -95,6 +95,20 @@ def main():
                normalize=True, value_range=(-1, 1))
     print("Saved latent-space interpolation:", outdir / "interpolation.png")
 
+    # The task sheet asks for "evidence of training … generated images, training loss plots
+    # etc.", and that evidence is spread over four figures, two of which train.py wrote and
+    # this script never touches. Printing all four here means one command produces the whole
+    # set of paths, instead of two of them plus a hunt through the file tree.
+    print("\n--- evidence of training (written by train.py, listed here for convenience) ---")
+    for name, what in [("loss_curve.png", "discriminator / generator losses"),
+                       ("diversity_curve.png", "diversity vs the real-data baseline"),
+                       (f"samples_epoch{saved.get('epoch', 80):03d}.png",
+                        "fixed-noise samples at the final epoch")]:
+        path = outdir / name
+        print(f"  {'OK     ' if path.exists() else 'MISSING'} {path}  — {what}")
+    n_grids = len(sorted(outdir.glob("samples_epoch*.png")))
+    print(f"  {n_grids} per-epoch sample grids in total, showing noise turning into brains")
+
 
 if __name__ == "__main__":
     main()
