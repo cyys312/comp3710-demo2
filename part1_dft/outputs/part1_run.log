@@ -22,24 +22,37 @@ first missing odd n=101 : 8.831e-17  (zero: only 50 harmonics were synthesised, 
 Amplitudes agree to machine precision because T=1 s and f0=1 Hz put every harmonic
 exactly on a bin centre, so there is no spectral leakage. Move f0 off an integer and
 each line smears into its neighbours instead.
+
+--- the same wave at f0=1.25 Hz, which falls between bins ---
+  bin [Hz]     measured
+         0     0.397874
+         1     1.209203
+         2     0.374858
+         3     0.248815
+         4     0.304454
+         5     0.002127
+the fundamental was synthesised with coefficient 1.273240, yet no bin holds it:
+  largest single bin: 1.209203  (95.0% of the true value)
+Each line has smeared across its neighbours. Integer f0 is what made the earlier
+comparison exact; it is a property of the chosen parameters, not of the DFT.
 Saved: /Users/cwy/comp3710/part1_dft/outputs/dft_spectrum.png
 
 --- Same O(N^2), different implementations (N=512) ---
-Nested Python loops : 0.0585 s
-NumPy matrix form   : 0.002400 s  (24x faster)
+Nested Python loops : 0.0568 s
+NumPy matrix form   : 0.002254 s  (25x faster)
 Results agree       : True
 
 --- DFT timing comparison (seconds, best of 3) ---
                        N=256         N=512         N=1024        N=2048        N=4096        
-NumPy naive DFT        0.000572      0.002238      0.009335      0.037196      0.145681      
-Torch naive DFT (mps)  0.000587      0.000835      0.001576      0.006524      0.010210      
-NumPy FFT              0.000003      0.000004      0.000006      0.000011      0.000018      
-Torch FFT (mps)        0.000418      0.000206      0.000212      0.000224      0.000175      
+NumPy naive DFT        0.000573      0.002247      0.009306      0.036935      0.145548      
+Torch naive DFT (mps)  0.000659      0.000798      0.002296      0.003923      0.010368      
+NumPy FFT              0.000003      0.000004      0.000006      0.000012      0.000018      
+Torch FFT (mps)        0.000514      0.000215      0.000218      0.000395      0.000408      
 
 --- Ranking from fastest to slowest for each N ---
-N=256    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.42 ms)  <  NumPy naive DFT (0.57 ms)  <  Torch naive DFT (mps) (0.59 ms)
-N=512    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.21 ms)  <  Torch naive DFT (mps) (0.84 ms)  <  NumPy naive DFT (2.24 ms)
-N=1024   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.21 ms)  <  Torch naive DFT (mps) (1.58 ms)  <  NumPy naive DFT (9.34 ms)
-N=2048   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.22 ms)  <  Torch naive DFT (mps) (6.52 ms)  <  NumPy naive DFT (37.20 ms)
-N=4096   NumPy FFT (0.02 ms)  <  Torch FFT (mps) (0.17 ms)  <  Torch naive DFT (mps) (10.21 ms)  <  NumPy naive DFT (145.68 ms)
+N=256    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.51 ms)  <  NumPy naive DFT (0.57 ms)  <  Torch naive DFT (mps) (0.66 ms)
+N=512    NumPy FFT (0.00 ms)  <  Torch FFT (mps) (0.22 ms)  <  Torch naive DFT (mps) (0.80 ms)  <  NumPy naive DFT (2.25 ms)
+N=1024   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.22 ms)  <  Torch naive DFT (mps) (2.30 ms)  <  NumPy naive DFT (9.31 ms)
+N=2048   NumPy FFT (0.01 ms)  <  Torch FFT (mps) (0.39 ms)  <  Torch naive DFT (mps) (3.92 ms)  <  NumPy naive DFT (36.93 ms)
+N=4096   NumPy FFT (0.02 ms)  <  Torch FFT (mps) (0.41 ms)  <  Torch naive DFT (mps) (10.37 ms)  <  NumPy naive DFT (145.55 ms)
 Saved: /Users/cwy/comp3710/part1_dft/outputs/dft_timing.png

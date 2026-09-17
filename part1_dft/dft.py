@@ -270,6 +270,30 @@ def compare_components(dft_result, n_samples, n_harmonics, top=6):
           "each line smears into its neighbours instead.")
 
 
+def demonstrate_leakage(t, n_samples, f0_off: float = 1.25, n_harmonics: int = 50):
+    """Produce the differences the task sheet asks about, on purpose, so the answer is shown.
+
+    With f0 at a whole number of cycles per window, every harmonic sits on a bin centre and the
+    DFT returns the synthesis coefficients exactly. Move f0 off an integer and the signal no
+    longer completes a whole number of periods inside the window. The DFT assumes the window
+    repeats, so it sees a step at the wrap-around, and each spectral line spreads across its
+    neighbouring bins instead of landing in one. That is spectral leakage, and it is the usual
+    reason measured components differ from the ones a signal was built from.
+    """
+    signal = square_wave_fourier(t, f0_off, n_harmonics)
+    magnitude = 2.0 / n_samples * np.abs(naive_dft(signal))
+    ideal = 4.0 / np.pi                      # the fundamental's synthesis coefficient
+    print(f"\n--- the same wave at f0={f0_off} Hz, which falls between bins ---")
+    print(f"{'bin [Hz]':>10}{'measured':>13}")
+    for k in range(6):
+        print(f"{k:>10}{magnitude[k]:>13.6f}")
+    peak = magnitude[:6].max()
+    print(f"the fundamental was synthesised with coefficient {ideal:.6f}, yet no bin holds it:")
+    print(f"  largest single bin: {peak:.6f}  ({peak / ideal * 100:.1f}% of the true value)")
+    print("Each line has smeared across its neighbours. Integer f0 is what made the earlier\n"
+          "comparison exact; it is a property of the chosen parameters, not of the DFT.")
+
+
 def plot_timings(sizes, results, path):
     """Runtimes on log-log axes: the slope gap between O(N^2) and O(N log N) is obvious."""
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -331,6 +355,7 @@ def main():
           f"~1e-7*sqrt(N) float32 range)")
 
     compare_components(dft_np, N_DEFAULT, 50)
+    demonstrate_leakage(t, N_DEFAULT)
     plot_spectrum(t, sig_np, dft_np, N_DEFAULT, OUTDIR / "dft_spectrum.png")
 
     # ---- (c) how slow the double-loop version really is ----
